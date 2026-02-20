@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECN Climbing Gym Map — UK & Ireland</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --forest:   #2a4520;
+    --forest-m: #3a5e2e;
+    --stone:    #6b6b5e;
+    --cream:    #f7f3ec;
+    --warm:     #ede8df;
+    --orange:   #d4581a;
+    --sand:     #c8b89a;
+    --white:    #ffffff;
+    --shadow:   0 4px 24px rgba(0,0,0,0.13);
+    --radius:   12px;
+  }
+
+  html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1a1a18; overflow: hidden; }
+
+  /* ── HEADER ─────────────────────────────────────────── */
+  #header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: var(--forest);
+    display: flex; align-items: center; gap: 16px;
+    padding: 0 20px; height: 58px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+  }
+  #header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.15rem; color: var(--cream); letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+  #header h1 span { color: var(--sand); }
+
+  .header-pill {
+    background: rgba(255,255,255,0.12);
+    color: var(--cream); font-size: 0.72rem; font-weight: 500;
+    padding: 3px 10px; border-radius: 20px; letter-spacing: 0.04em;
+  }
+
+  /* Search bar in header */
+  #search-wrap {
+    flex: 1; max-width: 340px; margin-left: auto;
+    position: relative;
+  }
+  #gym-search {
+    width: 100%; padding: 8px 16px 8px 36px;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 20px; color: var(--white);
+    font-size: 0.85rem; font-family: 'DM Sans', sans-serif;
+    outline: none; transition: background 0.2s, border-color 0.2s;
+  }
+  #gym-search::placeholder { color: rgba(255,255,255,0.55); }
+  #gym-search:focus { background: rgba(255,255,255,0.22); border-color: rgba(255,255,255,0.5); }
+  #search-icon {
+    position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+    color: rgba(255,255,255,0.6); font-size: 0.95rem; pointer-events: none;
+  }
+  #search-results {
+    position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+    background: var(--white); border-radius: var(--radius);
+    box-shadow: var(--shadow); overflow: hidden; max-height: 280px; overflow-y: auto;
+    display: none; z-index: 200;
+  }
+  #search-results.open { display: block; }
+  .search-item {
+    padding: 10px 16px; cursor: pointer; font-size: 0.85rem;
+    border-bottom: 1px solid #f0ece6; transition: background 0.15s;
+  }
+  .search-item:last-child { border-bottom: none; }
+  .search-item:hover { background: var(--warm); }
+  .search-item strong { display: block; color: var(--forest); }
+  .search-item small { color: var(--stone); font-size: 0.75rem; }
+
+  /* ── MAP ─────────────────────────────────────────────── */
+  #map {
+    position: fixed; top: 58px; left: 0; right: 0; bottom: 0;
+  }
+
+  /* ── FILTER BAR ──────────────────────────────────────── */
+  #filters {
+    position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
+    z-index: 50; display: flex; gap: 8px; flex-wrap: nowrap;
+    background: rgba(247,243,236,0.92);
+    backdrop-filter: blur(8px);
+    border-radius: 30px;
+    padding: 7px 12px;
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(200,184,154,0.5);
+  }
+  .filter-btn {
+    padding: 5px 13px; border-radius: 20px; border: 1.5px solid var(--sand);
+    background: transparent; font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem; font-weight: 500; color: var(--stone);
+    cursor: pointer; transition: all 0.18s; white-space: nowrap;
+  }
+  .filter-btn:hover { border-color: var(--forest-m); color: var(--forest); }
+  .filter-btn.active { background: var(--forest); color: var(--white); border-color: var(--forest); }
+  .filter-btn.danger { border-color: #c0392b; color: #c0392b; }
+  .filter-btn.danger:hover { background: #c0392b; color: var(--white); }
+
+  /* ── SIDEBAR PANEL ───────────────────────────────────── */
+  #panel {
+    position: fixed; top: 58px; right: 0; bottom: 0;
+    width: 340px; background: var(--cream);
+    transform: translateX(100%); transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+    z-index: 80; display: flex; flex-direction: column;
+    border-left: 1px solid var(--sand);
+    box-shadow: -6px 0 30px rgba(0,0,0,0.12);
+  }
+  #panel.open { transform: translateX(0); }
+
+  #panel-close {
+    position: absolute; top: 14px; right: 14px;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--warm); border: 1.5px solid var(--sand);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; color: var(--stone); transition: all 0.15s; z-index: 2;
+  }
+  #panel-close:hover { background: var(--forest); color: var(--white); border-color: var(--forest); }
+
+  #panel-header {
+    padding: 22px 20px 16px;
+    border-bottom: 1px solid var(--sand);
+    background: var(--forest);
+    flex-shrink: 0;
+  }
+  #panel-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.25rem; color: var(--white);
+    line-height: 1.3; padding-right: 36px;
+  }
+  #panel-address {
+    font-size: 0.78rem; color: rgba(255,255,255,0.65);
+    margin-top: 6px; line-height: 1.4;
+  }
+
+  #panel-body { flex: 1; overflow-y: auto; padding: 18px 20px; }
+
+  /* Price badge */
+  .price-badge {
+    display: inline-block;
+    background: var(--orange); color: var(--white);
+    font-size: 0.85rem; font-weight: 600;
+    padding: 4px 12px; border-radius: 20px; margin-bottom: 14px;
+  }
+  .price-badge.unknown { background: var(--stone); }
+
+  /* Amenity tags */
+  .amenity-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+  .tag {
+    display: flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 500;
+  }
+  .tag.yes { background: #e8f2e4; color: #2a5e1e; }
+  .tag.no  { background: #f0ede8; color: #9a9080; }
+
+  /* Transport */
+  .transport-section { margin-bottom: 18px; }
+  .transport-section h4 { font-size: 0.72rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--stone); margin-bottom: 6px; }
+  .transport-pills { display: flex; flex-wrap: wrap; gap: 5px; }
+  .transport-pill {
+    padding: 3px 9px; background: var(--warm); border: 1px solid var(--sand);
+    border-radius: 6px; font-size: 0.72rem; color: var(--stone); font-weight: 500;
+  }
+
+  /* Links */
+  #panel-links { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+  .panel-link {
+    flex: 1; min-width: 120px;
+    padding: 8px 12px; border-radius: var(--radius);
+    background: var(--warm); border: 1.5px solid var(--sand);
+    text-decoration: none; font-size: 0.78rem; font-weight: 500; color: var(--forest);
+    text-align: center; transition: all 0.15s; cursor: pointer;
+  }
+  .panel-link:hover { background: var(--forest); color: var(--white); border-color: var(--forest); }
+
+  /* ── ISOCHRONE SECTION ───────────────────────────────── */
+  .iso-section { margin-top: 4px; }
+  .iso-section h4 {
+    font-size: 0.72rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--stone); margin-bottom: 10px;
+  }
+
+  #iso-buttons { display: flex; gap: 8px; margin-bottom: 10px; }
+  .iso-btn {
+    flex: 1; padding: 9px 6px; border-radius: 10px;
+    border: 2px solid var(--sand);
+    background: var(--white); font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem; font-weight: 600; color: var(--stone);
+    cursor: pointer; transition: all 0.18s; text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+  }
+  .iso-btn .iso-icon { font-size: 1.1rem; }
+  .iso-btn:hover { border-color: var(--forest-m); color: var(--forest); }
+  .iso-btn.active-walk  { background: #e6f4e2; border-color: #4a8a3e; color: #2a5e1e; }
+  .iso-btn.active-cycle { background: #e2eff7; border-color: #2e7dba; color: #1a5c8a; }
+  .iso-btn.active-drive { background: #fef2e8; border-color: var(--orange); color: #a03a0a; }
+
+  #iso-clear {
+    width: 100%; padding: 8px; border-radius: 8px;
+    border: 1.5px solid var(--sand); background: transparent;
+    font-family: 'DM Sans', sans-serif; font-size: 0.78rem;
+    color: var(--stone); cursor: pointer; transition: all 0.15s;
+    display: none;
+  }
+  #iso-clear:hover { border-color: #c0392b; color: #c0392b; }
+  #iso-clear.visible { display: block; }
+
+  #iso-status {
+    font-size: 0.75rem; color: var(--stone);
+    margin-top: 8px; text-align: center; min-height: 18px;
+    font-style: italic;
+  }
+
+  /* ── LEGEND ──────────────────────────────────────────── */
+  #legend {
+    position: fixed; bottom: 28px; left: 16px; z-index: 50;
+    background: rgba(247,243,236,0.93); backdrop-filter: blur(8px);
+    border-radius: var(--radius); padding: 12px 16px;
+    box-shadow: var(--shadow); border: 1px solid rgba(200,184,154,0.5);
+    min-width: 140px;
+  }
+  #legend h5 {
+    font-size: 0.68rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.1em; color: var(--stone); margin-bottom: 8px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; font-size: 0.75rem; color: #3a3a30; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ── COUNT BADGE ─────────────────────────────────────── */
+  #count-badge {
+    position: fixed; bottom: 28px; right: 16px; z-index: 50;
+    background: var(--forest); color: var(--cream);
+    border-radius: var(--radius); padding: 10px 16px;
+    font-size: 0.78rem; font-weight: 500;
+    box-shadow: var(--shadow);
+  }
+  #count-badge span { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 700; }
+
+  /* ── MARKER STYLING ──────────────────────────────────── */
+  .gym-marker {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--orange); border: 2.5px solid var(--white);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+    cursor: pointer; transition: transform 0.15s;
+  }
+  .gym-marker:hover, .gym-marker.selected { transform: scale(1.5); }
+  .gym-marker.selected { background: var(--forest); }
+
+  /* loading spinner (inline iso use) */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner {
+    width: 16px; height: 16px; border: 2.5px solid var(--sand);
+    border-top-color: var(--forest); border-radius: 50%;
+    animation: spin 0.7s linear infinite; display: inline-block; vertical-align: middle;
+  }
+
+  /* ── LOADING OVERLAY ─────────────────────────────────── */
+  #loading-overlay {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(247,243,236,0.92); backdrop-filter: blur(6px);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 16px;
+  }
+  #loading-spinner {
+    width: 44px; height: 44px;
+    border: 4px solid var(--sand); border-top-color: var(--forest);
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+  }
+  #loading-msg {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem; color: var(--forest);
+  }
+  #loading-sub {
+    font-size: 0.8rem; color: var(--stone); text-align: center; max-width: 320px;
+  }
+</style>
+</head>
+<body>
+
+<!-- LOADING OVERLAY -->
+<div id="loading-overlay">
+  <div id="loading-spinner"></div>
+  <div id="loading-msg">Loading gym data…</div>
+  <div id="loading-sub"></div>
+</div>
+
+<!-- HEADER -->
+<div id="header">
+  <h1>ECN <span>Gym Map</span></h1>
+  <div class="header-pill">UK &amp; Ireland</div>
+  <div id="search-wrap">
+    <span id="search-icon">⌕</span>
+    <input id="gym-search" type="text" placeholder="Search gyms…" autocomplete="off">
+    <div id="search-results"></div>
+  </div>
+</div>
+
+<!-- FILTER BAR -->
+<div id="filters">
+  <button class="filter-btn active" data-filter="all">All gyms</button>
+  <button class="filter-btn" data-filter="boulders">🪨 Bouldering</button>
+  <button class="filter-btn" data-filter="ropes">🧗 Ropes</button>
+  <button class="filter-btn" data-filter="cafe">☕ Café</button>
+  <button class="filter-btn" data-filter="moonboard">🌙 Moonboard / Kilter</button>
+  <button class="filter-btn" data-filter="kids">👶 Kids Zone</button>
+  <button class="filter-btn" data-filter="speed">⚡ Speed Wall</button>
+</div>
+
+<!-- MAP -->
+<div id="map"></div>
+
+<!-- SIDEBAR PANEL -->
+<div id="panel">
+  <button id="panel-close">✕</button>
+  <div id="panel-header">
+    <div id="panel-name">Gym Name</div>
+    <div id="panel-address">Address</div>
+  </div>
+  <div id="panel-body">
+    <div id="panel-price"></div>
+    <div id="panel-links"></div>
+    <div class="transport-section">
+      <h4>Public Transport</h4>
+      <div id="panel-transport" class="transport-pills"></div>
+    </div>
+    <div class="amenity-grid" id="amenity-grid"></div>
+    <div class="iso-section">
+      <h4>20-min Isochrone</h4>
+      <div id="iso-buttons">
+        <button class="iso-btn" id="btn-walk" onclick="fetchIsochrone('walking')">
+          <span class="iso-icon">🚶</span> Walk
+        </button>
+        <button class="iso-btn" id="btn-cycle" onclick="fetchIsochrone('cycling')">
+          <span class="iso-icon">🚴</span> Cycle
+        </button>
+        <button class="iso-btn" id="btn-drive" onclick="fetchIsochrone('driving')">
+          <span class="iso-icon">🚗</span> Drive
+        </button>
+      </div>
+      <button id="iso-clear" onclick="clearIsochrone()">✕ Clear isochrone</button>
+      <div id="iso-status"></div>
+    </div>
+  </div>
+</div>
+
+<!-- LEGEND -->
+<div id="legend">
+  <h5>Isochrone</h5>
+  <div class="legend-item"><div class="legend-dot" style="background:#4a8a3e;opacity:0.5"></div> 20-min walk</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#2e7dba;opacity:0.5"></div> 20-min cycle</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#d4581a;opacity:0.5"></div> 20-min drive</div>
+</div>
+
+<!-- COUNT -->
+<div id="count-badge"><span id="visible-count">314</span> gyms</div>
+
+<script>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  CONFIG — update this URL when you change your Google Sheet
+// ═══════════════════════════════════════════════════════════════
+const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSwsrCp7nnygovZ1ZpsYbKjMZDyxBd3FLTPW2_nDWkLDqGfzVrqNoVjmErn1VkjrryYFvrjjNjHEejt/pub?gid=852920628&single=true&output=csv';
+// How to get this URL:
+//   1. In Google Sheets: File → Share → Publish to web
+//   2. Select your sheet tab, choose "Comma-separated values (.csv)"
+//   3. Click Publish, copy the URL, paste it above.
+// ═══════════════════════════════════════════════════════════════
+
+const MAPBOX_TOKEN = 'pk.eyJ1IjoiZXVyb2NsaW1iaW5nbmV3cyIsImEiOiJjbWxrdmI3bm4wMHk3M2dzOWM2dmwzNm5hIn0.zqw4vH5VDALlkPZC9xY8HA';
+mapboxgl.accessToken = MAPBOX_TOKEN;
+
+// ── MAP INIT ──────────────────────────────────────────────
+const map = new mapboxgl.Map({
+  container: 'map',
+  style: 'mapbox://styles/mapbox/outdoors-v12',
+  center: [-2.5, 54.5],
+  zoom: 5.5,
+  minZoom: 4
+});
+map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
+
+// ── STATE ─────────────────────────────────────────────────
+let GYMS = null;
+let markers = [];
+let selectedMarker = null;
+let selectedGym = null;
+let activeFilter = 'all';
+let activeIsoMode = null;
+
+// ── CSV PARSER ────────────────────────────────────────────
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+
+  const features = [];
+  for (let i = 1; i < lines.length; i++) {
+    // Handle quoted fields with commas inside
+    const row = [];
+    let current = '';
+    let inQuotes = false;
+    for (let c = 0; c < lines[i].length; c++) {
+      const ch = lines[i][c];
+      if (ch === '"') { inQuotes = !inQuotes; }
+      else if (ch === ',' && !inQuotes) { row.push(current.trim()); current = ''; }
+      else { current += ch; }
+    }
+    row.push(current.trim());
+
+    // Map CSV columns to property names
+    // Expected headers: Name, Address, Latitude, Longitude, Website, Phone,
+    //                   Place ID, Country, Café, Ropes, Boulders, Speed,
+    //                   Moon/Kilter/TB, Training Space, Kids Zone, Retail,
+    //                   Public Transport, Parking, Peak Entry Price
+    const get = (colName) => {
+      const idx = headers.findIndex(h => h.toLowerCase() === colName.toLowerCase());
+      return idx >= 0 ? (row[idx] || '').trim() : '';
+    };
+
+    const lat = parseFloat(get('Latitude'));
+    const lng = parseFloat(get('Longitude'));
+    if (isNaN(lat) || isNaN(lng)) continue;
+
+    features.push({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [lng, lat] },
+      properties: {
+        name:      get('Name'),
+        address:   get('Address'),
+        website:   get('Website'),
+        phone:     get('Phone'),
+        cafe:      get('Café') || get('Cafe'),
+        ropes:     get('Ropes'),
+        boulders:  get('Boulders'),
+        speed:     get('Speed'),
+        moonboard: get('Moon/Kilter/TB'),
+        training:  get('Training Space'),
+        kids:      get('Kids Zone'),
+        retail:    get('Retail'),
+        transport: get('Public Transport'),
+        parking:   get('Parking'),
+        price:     get('Peak Entry Price'),
+      }
+    });
+  }
+  return { type: 'FeatureCollection', features };
+}
+
+// ── LOADING SCREEN ────────────────────────────────────────
+function showLoading(msg) {
+  document.getElementById('loading-overlay').style.display = 'flex';
+  document.getElementById('loading-msg').textContent = msg;
+}
+function hideLoading() {
+  document.getElementById('loading-overlay').style.display = 'none';
+}
+function showError(msg) {
+  document.getElementById('loading-overlay').style.display = 'flex';
+  document.getElementById('loading-spinner').style.display = 'none';
+  document.getElementById('loading-msg').textContent = msg;
+  document.getElementById('loading-sub').textContent = 'Check the SHEET_CSV_URL in the HTML config, then reload.';
+}
+
+// ── FETCH DATA ────────────────────────────────────────────
+async function loadGyms() {
+  showLoading('Loading gym data…');
+  try {
+    const resp = await fetch(SHEET_CSV_URL);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const text = await resp.text();
+    GYMS = parseCSV(text);
+    if (GYMS.features.length === 0) throw new Error('No gyms parsed — check column headers');
+    document.getElementById('visible-count').textContent = GYMS.features.length;
+    hideLoading();
+    // If map already loaded, build markers now; else wait for map load event
+    if (map.loaded()) buildMarkers();
+  } catch (err) {
+    console.error('Failed to load gym data:', err);
+    showError(`⚠ Could not load gym data: ${err.message}`);
+  }
+}
+
+// ── RENDER MARKERS ────────────────────────────────────────
+function matchesFilter(props, filter) {
+  if (filter === 'all') return true;
+  if (filter === 'boulders') return props.boulders === 'Y';
+  if (filter === 'ropes') return props.ropes === 'Y' || props.ropes === 'AUTOBELAY';
+  if (filter === 'cafe') return props.cafe && props.cafe.toUpperCase() === 'Y';
+  if (filter === 'moonboard') return props.moonboard === 'Y';
+  if (filter === 'kids') return props.kids === 'Y';
+  if (filter === 'speed') return props.speed === 'Y';
+  return true;
+}
+
+function buildMarkers() {
+  if (!GYMS) return;
+  markers.forEach(m => m.marker.remove());
+  markers = [];
+  let count = 0;
+  GYMS.features.forEach((f, i) => {
+    const p = f.properties;
+    if (!matchesFilter(p, activeFilter)) return;
+    count++;
+    const el = document.createElement('div');
+    el.className = 'gym-marker';
+    el.dataset.idx = i;
+    const m = new mapboxgl.Marker({ element: el })
+      .setLngLat(f.geometry.coordinates)
+      .addTo(map);
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectGym(i, el);
+    });
+    markers.push({ marker: m, el, idx: i });
+  });
+  document.getElementById('visible-count').textContent = count;
+}
+
+// ── SELECT GYM ────────────────────────────────────────────
+function selectGym(idx, el) {
+  if (selectedMarker) selectedMarker.classList.remove('selected');
+  selectedMarker = el;
+  el.classList.add('selected');
+  selectedGym = GYMS.features[idx];
+  clearIsochrone();
+  showPanel(selectedGym.properties);
+  map.flyTo({ center: selectedGym.geometry.coordinates, zoom: Math.max(map.getZoom(), 13), duration: 800 });
+}
+
+// ── PANEL ─────────────────────────────────────────────────
+function showPanel(p) {
+  document.getElementById('panel-name').textContent = p.name;
+  document.getElementById('panel-address').textContent = p.address;
+
+  const priceEl = document.getElementById('panel-price');
+  if (p.price && p.price !== '') {
+    priceEl.innerHTML = `<div class="price-badge">Peak entry: £${parseFloat(p.price).toFixed(2)}</div>`;
+  } else {
+    priceEl.innerHTML = `<div class="price-badge unknown">Price not listed</div>`;
+  }
+
+  const linksEl = document.getElementById('panel-links');
+  let linksHtml = '';
+  if (p.website) linksHtml += `<a href="${p.website}" class="panel-link" target="_blank" rel="noopener">🌐 Website</a>`;
+  if (p.phone) linksHtml += `<a href="tel:${p.phone}" class="panel-link">📞 ${p.phone}</a>`;
+  linksEl.innerHTML = linksHtml;
+
+  const transEl = document.getElementById('panel-transport');
+  if (p.transport && p.transport !== 'NONE' && p.transport !== '') {
+    const modes = p.transport.split(',').map(t => t.trim()).filter(Boolean);
+    transEl.innerHTML = modes.map(m => `<span class="transport-pill">${m}</span>`).join('');
+  } else {
+    transEl.innerHTML = `<span class="transport-pill">No public transport listed</span>`;
+  }
+
+  const amenities = [
+    { key: 'boulders', label: '🪨 Bouldering' },
+    { key: 'ropes',    label: '🧗 Ropes / Autobelay', special: true },
+    { key: 'cafe',     label: '☕ Café' },
+    { key: 'moonboard',label: '🌙 Moon/Kilter/TB' },
+    { key: 'training', label: '💪 Training Space' },
+    { key: 'kids',     label: '👶 Kids Zone' },
+    { key: 'speed',    label: '⚡ Speed Wall' },
+    { key: 'retail',   label: '🛍️ Retail' },
+    { key: 'parking',  label: '🅿️ Parking' },
+  ];
+  document.getElementById('amenity-grid').innerHTML = amenities.map(a => {
+    let val = p[a.key];
+    let isYes = val === 'Y' || val === 'AUTOBELAY';
+    return `<div class="tag ${isYes ? 'yes' : 'no'}">${isYes ? '✓' : '✗'} ${a.label}</div>`;
+  }).join('');
+
+  document.getElementById('panel').classList.add('open');
+  ['btn-walk','btn-cycle','btn-drive'].forEach(id => {
+    document.getElementById(id).className = 'iso-btn';
+  });
+  document.getElementById('iso-status').textContent = '';
+}
+
+document.getElementById('panel-close').addEventListener('click', () => {
+  document.getElementById('panel').classList.remove('open');
+  if (selectedMarker) selectedMarker.classList.remove('selected');
+  selectedMarker = null;
+  clearIsochrone();
+});
+
+// ── ISOCHRONE ─────────────────────────────────────────────
+const ISO_COLORS = {
+  walking: { fill: '#4a8a3e', line: '#2d6024' },
+  cycling: { fill: '#2e7dba', line: '#1a5c8a' },
+  driving: { fill: '#d4581a', line: '#a03a0a' }
+};
+
+async function fetchIsochrone(mode) {
+  if (!selectedGym) return;
+  if (activeIsoMode === mode) { clearIsochrone(); return; }
+
+  clearIsochrone(false);
+  activeIsoMode = mode;
+
+  const [lng, lat] = selectedGym.geometry.coordinates;
+  const mapboxMode = mode;
+
+  ['btn-walk','btn-cycle','btn-drive'].forEach(id => document.getElementById(id).className = 'iso-btn');
+  const btnMap = { walking: 'btn-walk', cycling: 'btn-cycle', driving: 'btn-drive' };
+  document.getElementById(btnMap[mode]).className = `iso-btn active-${mode === 'walking' ? 'walk' : mode === 'cycling' ? 'cycle' : 'drive'}`;
+  document.getElementById('iso-status').innerHTML = `<span class="spinner"></span> Fetching ${mode} isochrone…`;
+
+  const url = `https://api.mapbox.com/isochrone/v1/mapbox/${mapboxMode}/${lng},${lat}?contours_minutes=20&polygons=true&access_token=${MAPBOX_TOKEN}`;
+  try {
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (!data.features || data.features.length === 0) throw new Error('No data');
+
+    const colors = ISO_COLORS[mode];
+    if (!map.getSource('isochrone')) {
+      map.addSource('isochrone', { type: 'geojson', data });
+      map.addLayer({ id: 'isochrone-fill', type: 'fill', source: 'isochrone',
+        paint: { 'fill-color': colors.fill, 'fill-opacity': 0.22 }
+      });
+      map.addLayer({ id: 'isochrone-line', type: 'line', source: 'isochrone',
+        paint: { 'line-color': colors.line, 'line-width': 2, 'line-opacity': 0.8 }
+      });
+    } else {
+      map.getSource('isochrone').setData(data);
+      map.setPaintProperty('isochrone-fill', 'fill-color', colors.fill);
+      map.setPaintProperty('isochrone-line', 'line-color', colors.line);
+    }
+
+    document.getElementById('iso-status').textContent = `Showing 20-min ${mode} zone`;
+    document.getElementById('iso-clear').classList.add('visible');
+
+    const coords = data.features[0].geometry.coordinates[0];
+    const bounds = coords.reduce((b, c) => b.extend(c), new mapboxgl.LngLatBounds(coords[0], coords[0]));
+    map.fitBounds(bounds, { padding: 60, maxZoom: 14, duration: 800 });
+
+  } catch (err) {
+    document.getElementById('iso-status').textContent = '⚠ Could not load isochrone.';
+    console.error(err);
+  }
+}
+
+function clearIsochrone(resetBtn = true) {
+  activeIsoMode = null;
+  if (map.getLayer('isochrone-fill')) map.removeLayer('isochrone-fill');
+  if (map.getLayer('isochrone-line')) map.removeLayer('isochrone-line');
+  if (map.getSource('isochrone')) map.removeSource('isochrone');
+  document.getElementById('iso-clear').classList.remove('visible');
+  document.getElementById('iso-status').textContent = '';
+  if (resetBtn) {
+    ['btn-walk','btn-cycle','btn-drive'].forEach(id => document.getElementById(id).className = 'iso-btn');
+  }
+}
+
+// ── FILTERS ───────────────────────────────────────────────
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter = btn.dataset.filter;
+    buildMarkers();
+    if (activeFilter !== 'all') {
+      document.getElementById('panel').classList.remove('open');
+      clearIsochrone();
+    }
+  });
+});
+
+// ── SEARCH ────────────────────────────────────────────────
+const searchInput = document.getElementById('gym-search');
+const searchResults = document.getElementById('search-results');
+
+searchInput.addEventListener('input', () => {
+  if (!GYMS) return;
+  const q = searchInput.value.trim().toLowerCase();
+  if (q.length < 2) { searchResults.classList.remove('open'); return; }
+  const matches = GYMS.features.filter(f =>
+    f.properties.name.toLowerCase().includes(q) ||
+    f.properties.address.toLowerCase().includes(q)
+  ).slice(0, 8);
+  if (matches.length === 0) { searchResults.classList.remove('open'); return; }
+  searchResults.innerHTML = matches.map(f => {
+    const idx = GYMS.features.indexOf(f);
+    return `<div class="search-item" data-idx="${idx}">
+      <strong>${f.properties.name}</strong>
+      <small>${f.properties.address.split(',').slice(-3).join(',').trim()}</small>
+    </div>`;
+  }).join('');
+  searchResults.classList.add('open');
+});
+
+searchResults.addEventListener('click', e => {
+  const item = e.target.closest('.search-item');
+  if (!item) return;
+  const idx = parseInt(item.dataset.idx);
+  searchInput.value = GYMS.features[idx].properties.name;
+  searchResults.classList.remove('open');
+  const markerObj = markers.find(m => m.idx === idx);
+  if (markerObj) {
+    selectGym(idx, markerObj.el);
+  } else {
+    const coords = GYMS.features[idx].geometry.coordinates;
+    map.flyTo({ center: coords, zoom: 14 });
+    selectGym(idx, document.createElement('div'));
+  }
+});
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('#search-wrap')) {
+    searchResults.classList.remove('open');
+  }
+});
+
+// ── STARTUP ───────────────────────────────────────────────
+map.on('load', () => {
+  if (GYMS) buildMarkers(); // data already fetched before map loaded
+});
+
+loadGyms(); // kick off data fetch immediately (parallel with map load)
+
+</script>
+</body>
+</html>
