@@ -545,23 +545,6 @@
 <div id="count-badge"><span id="visible-count">314</span> gyms</div>
 
 <script>
-// ═══════════════════════════════════════════════════════════════
-//  SECURITY — referrer check
-//  Replace both values below with your Squarespace domain and
-//  the URL of your paywall/members page.
-//  Visitors who load the GitHub URL directly (not via your
-//  Squarespace embed) will be redirected to your paywall.
-// ═══════════════════════════════════════════════════════════════
-(function() {
-  var ALLOWED_REFERRER = 'yoursite.squarespace.com'; // ← change this
-  var PAYWALL_URL      = 'https://yoursite.squarespace.com/members'; // ← change this
-  var ref = document.referrer;
-  var isLocal = window.location.hostname === 'localhost' ||
-                window.location.hostname === '127.0.0.1';
-  if (!isLocal && (ref === '' || !ref.includes(ALLOWED_REFERRER))) {
-    window.location.replace(PAYWALL_URL);
-  }
-})();
 
 // ═══════════════════════════════════════════════════════════════
 //  CONFIG — update this URL when you change your Google Sheet
