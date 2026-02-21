@@ -206,6 +206,11 @@
   .iso-btn.active-walk  { background: #e6f4e2; border-color: #4a8a3e; color: #2a5e1e; }
   .iso-btn.active-cycle { background: #e2eff7; border-color: #2e7dba; color: #1a5c8a; }
   .iso-btn.active-drive { background: #fef2e8; border-color: var(--orange); color: #a03a0a; }
+  .iso-btn.active-slot {
+    background: color-mix(in srgb, var(--slot-color, var(--orange)) 12%, white);
+    border-color: var(--slot-color, var(--orange));
+    color: var(--slot-color, var(--orange));
+  }
 
   #iso-clear {
     width: 100%; padding: 8px; border-radius: 8px;
@@ -285,6 +290,173 @@
   #loading-sub {
     font-size: 0.8rem; color: var(--stone); text-align: center; max-width: 320px;
   }
+
+  /* ── DRAG HANDLE (mobile panel) ──────────────────────── */
+  #panel-drag-handle {
+    display: none;
+    width: 36px; height: 4px; border-radius: 2px;
+    background: var(--sand); margin: 10px auto 0; flex-shrink: 0;
+  }
+
+  /* ── COMPARE BUTTON ──────────────────────────────────── */
+  #compare-btn {
+    display: inline-block; margin-top: 10px;
+    padding: 5px 14px; border-radius: 20px;
+    border: 1.5px solid rgba(255,255,255,0.35);
+    background: rgba(255,255,255,0.12);
+    color: var(--cream); font-family: 'DM Sans', sans-serif;
+    font-size: 0.72rem; font-weight: 500;
+    cursor: pointer; transition: all 0.15s;
+  }
+  #compare-btn:hover { background: rgba(255,255,255,0.22); border-color: rgba(255,255,255,0.6); }
+  #compare-btn.pinned { background: rgba(255,255,255,0.28); border-color: var(--white); font-weight: 600; }
+  #compare-btn.full { opacity: 0.5; cursor: not-allowed; }
+
+  /* ── TRANSPORT STOPS STATUS ──────────────────────────── */
+  #transport-stops-status {
+    font-size: 0.71rem; color: var(--stone); font-style: italic;
+    margin-top: 5px; min-height: 16px;
+  }
+
+  /* ── TRANSPORT STOP MARKERS ──────────────────────────── */
+  .transport-marker {
+    font-size: 17px; line-height: 1; cursor: default;
+    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.45));
+    transition: transform 0.12s;
+  }
+  .transport-marker:hover { transform: scale(1.25); }
+
+  /* ── COMPARISON TRAY ─────────────────────────────────── */
+  #comparison-tray {
+    position: fixed; bottom: 28px; left: 16px; z-index: 50;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  #comparison-tray:empty { display: none; }
+  .compare-chip {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(247,243,236,0.93); backdrop-filter: blur(8px);
+    border-radius: 10px; padding: 7px 10px 7px 12px;
+    box-shadow: var(--shadow); border: 1px solid rgba(200,184,154,0.5);
+    font-size: 0.76rem; max-width: 230px;
+    animation: chipIn 0.2s ease;
+  }
+  @keyframes chipIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .compare-dot {
+    width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0;
+  }
+  .compare-info { flex: 1; min-width: 0; }
+  .compare-name { color: var(--forest); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .compare-mode { color: var(--stone); font-size: 0.68rem; margin-top: 1px; }
+  .compare-remove {
+    background: none; border: none; cursor: pointer;
+    color: var(--stone); font-size: 0.85rem; padding: 2px 4px;
+    border-radius: 4px; line-height: 1; flex-shrink: 0;
+    transition: color 0.12s;
+  }
+  .compare-remove:hover { color: #c0392b; }
+
+  /* ══════════════════════════════════════════════════════
+     MOBILE STYLES  (≤ 768px)
+  ══════════════════════════════════════════════════════ */
+  @media (max-width: 768px) {
+
+    /* Header: stack into two rows */
+    #header {
+      height: auto;
+      flex-wrap: wrap;
+      padding: 10px 16px 10px;
+      gap: 6px;
+      align-items: center;
+    }
+    #header h1 { font-size: 1rem; }
+    .header-pill { font-size: 0.68rem; padding: 2px 8px; }
+
+    /* Search goes full-width on second row */
+    #search-wrap {
+      order: 3;
+      flex: none;
+      width: 100%;
+      max-width: 100%;
+      margin-left: 0;
+    }
+    #search-results { max-height: 200px; }
+
+    /* Map: starts below taller header (≈ 94px) + filter bar (≈ 46px) */
+    #map { top: 140px; }
+
+    /* Filter bar: full-width horizontal scroll strip */
+    #filters {
+      top: 94px;
+      left: 0; right: 0;
+      transform: none;
+      border-radius: 0;
+      padding: 8px 12px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      justify-content: flex-start;
+      border-left: none; border-right: none; border-top: none;
+      border-bottom: 1px solid rgba(200,184,154,0.4);
+      border-radius: 0;
+      gap: 6px;
+    }
+    #filters::-webkit-scrollbar { display: none; }
+    .filter-btn { font-size: 0.75rem; padding: 5px 11px; flex-shrink: 0; }
+
+    /* Panel: slide up from bottom as a sheet */
+    #panel {
+      top: auto;
+      bottom: 0; left: 0; right: 0;
+      width: 100%;
+      height: 72vh;
+      max-height: 72vh;
+      transform: translateY(100%);
+      border-left: none;
+      border-top: 1px solid var(--sand);
+      border-radius: 18px 18px 0 0;
+      box-shadow: 0 -8px 40px rgba(0,0,0,0.18);
+    }
+    #panel.open { transform: translateY(0); }
+
+    /* Drag handle visible on mobile */
+    #panel-drag-handle { display: block; }
+
+    /* Panel header padding tweak */
+    #panel-header { padding: 14px 20px 14px; }
+    #panel-name { font-size: 1.1rem; padding-right: 40px; }
+
+    /* Larger tap targets for markers */
+    .gym-marker { width: 18px; height: 18px; border-width: 3px; }
+
+    /* Hide legend on mobile — info is in the panel */
+    #legend { display: none; }
+
+    /* Count badge: smaller, tucked into corner */
+    #count-badge {
+      bottom: 16px; right: 12px;
+      padding: 7px 12px;
+      font-size: 0.72rem;
+      border-radius: 10px;
+    }
+    #count-badge span { font-size: 0.95rem; }
+
+    /* Mapbox nav controls: move up so they don't overlap bottom sheet */
+    .mapboxgl-ctrl-bottom-right {
+      bottom: 16px !important;
+      right: 12px !important;
+      /* hidden when panel open — handled by JS class */
+    }
+    .panel-open-mobile .mapboxgl-ctrl-bottom-right {
+      bottom: 76vh !important;
+    }
+
+    /* Make panel-close easier to tap */
+    #panel-close {
+      width: 36px; height: 36px; font-size: 1.1rem;
+      top: 12px; right: 12px;
+    }
+  }
 </style>
 </head>
 <body>
@@ -323,44 +495,50 @@
 
 <!-- SIDEBAR PANEL -->
 <div id="panel">
+  <div id="panel-drag-handle"></div>
   <button id="panel-close">✕</button>
   <div id="panel-header">
     <div id="panel-name">Gym Name</div>
     <div id="panel-address">Address</div>
+    <button id="compare-btn" onclick="toggleCompare()">📍 Add to comparison</button>
   </div>
   <div id="panel-body">
     <div id="panel-price"></div>
     <div id="panel-links"></div>
     <div class="transport-section">
-      <h4>Public Transport</h4>
+      <h4>Public Transport Nearby</h4>
       <div id="panel-transport" class="transport-pills"></div>
+      <div id="transport-stops-status"></div>
     </div>
     <div class="amenity-grid" id="amenity-grid"></div>
     <div class="iso-section">
-      <h4>20-min Isochrone</h4>
+      <h4>20-min Travel Zone</h4>
       <div id="iso-buttons">
-        <button class="iso-btn" id="btn-walk" onclick="fetchIsochrone('walking')">
+        <button class="iso-btn" id="btn-walk" onclick="fetchTravel('walking')">
           <span class="iso-icon">🚶</span> Walk
         </button>
-        <button class="iso-btn" id="btn-cycle" onclick="fetchIsochrone('cycling')">
+        <button class="iso-btn" id="btn-cycle" onclick="fetchTravel('cycling')">
           <span class="iso-icon">🚴</span> Cycle
         </button>
-        <button class="iso-btn" id="btn-drive" onclick="fetchIsochrone('driving')">
+        <button class="iso-btn" id="btn-drive" onclick="fetchTravel('driving')">
           <span class="iso-icon">🚗</span> Drive
         </button>
       </div>
-      <button id="iso-clear" onclick="clearIsochrone()">✕ Clear isochrone</button>
+      <button id="iso-clear" onclick="clearGymTravel()">✕ Clear travel zone</button>
       <div id="iso-status"></div>
     </div>
   </div>
 </div>
 
+<!-- COMPARISON TRAY -->
+<div id="comparison-tray"></div>
+
 <!-- LEGEND -->
 <div id="legend">
-  <h5>Isochrone</h5>
-  <div class="legend-item"><div class="legend-dot" style="background:#4a8a3e;opacity:0.5"></div> 20-min walk</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#2e7dba;opacity:0.5"></div> 20-min cycle</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#d4581a;opacity:0.5"></div> 20-min drive</div>
+  <h5>Travel Zones</h5>
+  <div class="legend-item"><div class="legend-dot" style="background:#d4581a;opacity:0.8"></div> Gym 1</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#1a8a7a;opacity:0.8"></div> Gym 2</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#7c3aed;opacity:0.8"></div> Gym 3</div>
 </div>
 
 <!-- COUNT -->
@@ -385,11 +563,11 @@ const PAYWALL_URL      = 'https://www.euroclimbing.news/pro'; // ← change this
     window.location.replace(PAYWALL_URL);
   }
 })();
- 
+
 // ═══════════════════════════════════════════════════════════════
 //  CONFIG — update this URL when you change your Google Sheet
 // ═══════════════════════════════════════════════════════════════
-const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSwsrCp7nnygovZ1ZpsYbKjMZDyxBd3FLTPW2_nDWkLDqGfzVrqNoVjmErn1VkjrryYFvrjjNjHEejt/pub?gid=852920628&single=true&output=csv';
+const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSwsrCp7nnygovZ1ZpsYbKjMZDyxBd3FLTPW2_nDWkLDqGfzVrqNoVjmErn1VkjrryYFvrjjNjHEejt/pubhtml?gid=852920628&single=true';
 // How to get this URL:
 //   1. In Google Sheets: File → Share → Publish to web
 //   2. Select your sheet tab, choose "Comma-separated values (.csv)"
@@ -414,8 +592,18 @@ let GYMS = null;
 let markers = [];
 let selectedMarker = null;
 let selectedGym = null;
+let selectedGymIdx = null;
 let activeFilter = 'all';
-let activeIsoMode = null;
+let transportMarkers = [];
+
+// Comparison: up to 3 pinned gyms, each with a colour slot
+// { gymIdx, gymName, color, lineColor, mode, sourceId, fillId, lineId }
+let pinnedGyms = [];
+const SLOT_COLORS = [
+  { fill: '#d4581a', line: '#a03a0a' }, // orange
+  { fill: '#1a8a7a', line: '#0d5c52' }, // teal
+  { fill: '#7c3aed', line: '#5b21b6' }, // purple
+];
 
 // ── CSV PARSER ────────────────────────────────────────────
 function parseCSV(text) {
@@ -551,134 +739,335 @@ function selectGym(idx, el) {
   selectedMarker = el;
   el.classList.add('selected');
   selectedGym = GYMS.features[idx];
-  clearIsochrone();
-  showPanel(selectedGym.properties);
+  selectedGymIdx = idx;
+  clearTransportMarkers();
+  showPanel(selectedGym.properties, idx);
   map.flyTo({ center: selectedGym.geometry.coordinates, zoom: Math.max(map.getZoom(), 13), duration: 800 });
+  const [lng, lat] = selectedGym.geometry.coordinates;
+  fetchTransportStops(lat, lng);
 }
 
 // ── PANEL ─────────────────────────────────────────────────
-function showPanel(p) {
+function showPanel(p, idx) {
   document.getElementById('panel-name').textContent = p.name;
   document.getElementById('panel-address').textContent = p.address;
 
   const priceEl = document.getElementById('panel-price');
-  if (p.price && p.price !== '') {
-    priceEl.innerHTML = `<div class="price-badge">Peak entry: £${parseFloat(p.price).toFixed(2)}</div>`;
-  } else {
-    priceEl.innerHTML = `<div class="price-badge unknown">Price not listed</div>`;
-  }
+  priceEl.innerHTML = (p.price && p.price !== '')
+    ? `<div class="price-badge">Peak entry: £${parseFloat(p.price).toFixed(2)}</div>`
+    : `<div class="price-badge unknown">Price not listed</div>`;
 
   const linksEl = document.getElementById('panel-links');
   let linksHtml = '';
   if (p.website) linksHtml += `<a href="${p.website}" class="panel-link" target="_blank" rel="noopener">🌐 Website</a>`;
-  if (p.phone) linksHtml += `<a href="tel:${p.phone}" class="panel-link">📞 ${p.phone}</a>`;
+  if (p.phone)   linksHtml += `<a href="tel:${p.phone}" class="panel-link">📞 ${p.phone}</a>`;
   linksEl.innerHTML = linksHtml;
 
   const transEl = document.getElementById('panel-transport');
   if (p.transport && p.transport !== 'NONE' && p.transport !== '') {
     const modes = p.transport.split(',').map(t => t.trim()).filter(Boolean);
-    transEl.innerHTML = modes.map(m => `<span class="transport-pill">${m}</span>`).join('');
+    transEl.innerHTML = modes.map(m => `<span class="transport-pill">${transportLabel(m)}</span>`).join('');
   } else {
     transEl.innerHTML = `<span class="transport-pill">No public transport listed</span>`;
   }
+  document.getElementById('transport-stops-status').textContent = '';
 
   const amenities = [
-    { key: 'boulders', label: '🪨 Bouldering' },
-    { key: 'ropes',    label: '🧗 Ropes / Autobelay', special: true },
-    { key: 'cafe',     label: '☕ Café' },
-    { key: 'moonboard',label: '🌙 Moon/Kilter/TB' },
-    { key: 'training', label: '💪 Training Space' },
-    { key: 'kids',     label: '👶 Kids Zone' },
-    { key: 'speed',    label: '⚡ Speed Wall' },
-    { key: 'retail',   label: '🛍️ Retail' },
-    { key: 'parking',  label: '🅿️ Parking' },
+    { key: 'boulders',  label: '🪨 Bouldering' },
+    { key: 'ropes',     label: '🧗 Ropes / Autobelay' },
+    { key: 'cafe',      label: '☕ Café' },
+    { key: 'moonboard', label: '🌙 Moon/Kilter/TB' },
+    { key: 'training',  label: '💪 Training Space' },
+    { key: 'kids',      label: '👶 Kids Zone' },
+    { key: 'speed',     label: '⚡ Speed Wall' },
+    { key: 'retail',    label: '🛍️ Retail' },
+    { key: 'parking',   label: '🅿️ Parking' },
   ];
   document.getElementById('amenity-grid').innerHTML = amenities.map(a => {
-    let val = p[a.key];
-    let isYes = val === 'Y' || val === 'AUTOBELAY';
+    const isYes = p[a.key] === 'Y' || p[a.key] === 'AUTOBELAY';
     return `<div class="tag ${isYes ? 'yes' : 'no'}">${isYes ? '✓' : '✗'} ${a.label}</div>`;
   }).join('');
 
+  // Update travel zone buttons to reflect pinned colour
+  updateTravelButtons(idx);
+
+  // Update compare button
+  updateCompareBtn(idx);
+
   document.getElementById('panel').classList.add('open');
-  ['btn-walk','btn-cycle','btn-drive'].forEach(id => {
-    document.getElementById(id).className = 'iso-btn';
-  });
+  document.body.classList.add('panel-open-mobile');
   document.getElementById('iso-status').textContent = '';
+}
+
+function transportLabel(mode) {
+  const icons = { BUS:'🚌 Bus', TRAIN:'🚂 Train', TRAM:'🚃 Tram',
+    UNDERGROUND:'🚇 Underground', METRO:'🚇 Metro', FERRY:'⛴️ Ferry', TRAM_TRAIN:'🚈 Tram-Train' };
+  return icons[mode.toUpperCase()] || mode;
+}
+
+function updateCompareBtn(idx) {
+  const btn = document.getElementById('compare-btn');
+  const pinned = pinnedGyms.find(g => g.gymIdx === idx);
+  if (pinned) {
+    btn.textContent = '✓ In comparison';
+    btn.className = 'pinned';
+  } else if (pinnedGyms.length >= 3) {
+    btn.textContent = '📍 Comparison full (3/3)';
+    btn.className = 'full';
+  } else {
+    btn.textContent = '📍 Add to comparison';
+    btn.className = '';
+  }
+}
+
+function updateTravelButtons(idx) {
+  const pinned = pinnedGyms.find(g => g.gymIdx === idx);
+  const color = pinned ? pinned.color.fill : null;
+  const mode  = pinned ? pinned.mode : null;
+  ['btn-walk','btn-cycle','btn-drive'].forEach(id => {
+    const btn = document.getElementById(id);
+    btn.className = 'iso-btn';
+    if (color) btn.style.setProperty('--slot-color', color);
+    else btn.style.removeProperty('--slot-color');
+  });
+  if (mode) {
+    const btnMap = { walking:'btn-walk', cycling:'btn-cycle', driving:'btn-drive' };
+    const activeBtn = document.getElementById(btnMap[mode]);
+    if (activeBtn) {
+      activeBtn.className = 'iso-btn active-slot';
+      if (color) activeBtn.style.setProperty('--slot-color', color);
+    }
+  }
+  const hasTravelZone = !!pinned && !!pinned.mode;
+  document.getElementById('iso-clear').classList.toggle('visible', hasTravelZone);
 }
 
 document.getElementById('panel-close').addEventListener('click', () => {
   document.getElementById('panel').classList.remove('open');
+  document.body.classList.remove('panel-open-mobile');
   if (selectedMarker) selectedMarker.classList.remove('selected');
   selectedMarker = null;
-  clearIsochrone();
+  selectedGym = null;
+  selectedGymIdx = null;
+  clearTransportMarkers();
 });
 
-// ── ISOCHRONE ─────────────────────────────────────────────
-const ISO_COLORS = {
-  walking: { fill: '#4a8a3e', line: '#2d6024' },
-  cycling: { fill: '#2e7dba', line: '#1a5c8a' },
-  driving: { fill: '#d4581a', line: '#a03a0a' }
-};
+// ── COMPARISON ────────────────────────────────────────────
+function toggleCompare() {
+  if (selectedGymIdx === null) return;
+  const existing = pinnedGyms.findIndex(g => g.gymIdx === selectedGymIdx);
+  if (existing >= 0) {
+    removePinnedGym(existing);
+  } else {
+    if (pinnedGyms.length >= 3) return;
+    const slotIdx = getNextSlot();
+    pinnedGyms.push({
+      gymIdx:   selectedGymIdx,
+      gymName:  selectedGym.properties.name,
+      color:    SLOT_COLORS[slotIdx],
+      slotIdx,
+      mode:     null,
+      sourceId: `travel-src-${slotIdx}`,
+      fillId:   `travel-fill-${slotIdx}`,
+      lineId:   `travel-line-${slotIdx}`,
+    });
+    updateCompareBtn(selectedGymIdx);
+    updateTravelButtons(selectedGymIdx);
+    renderComparisonTray();
+  }
+}
 
-async function fetchIsochrone(mode) {
-  if (!selectedGym) return;
-  if (activeIsoMode === mode) { clearIsochrone(); return; }
+function getNextSlot() {
+  const usedSlots = pinnedGyms.map(g => g.slotIdx);
+  for (let i = 0; i < 3; i++) if (!usedSlots.includes(i)) return i;
+  return 0;
+}
 
-  clearIsochrone(false);
-  activeIsoMode = mode;
+function removePinnedGym(pinnedIdx) {
+  const g = pinnedGyms[pinnedIdx];
+  // Remove map layers
+  if (map.getLayer(g.fillId)) map.removeLayer(g.fillId);
+  if (map.getLayer(g.lineId)) map.removeLayer(g.lineId);
+  if (map.getSource(g.sourceId)) map.removeSource(g.sourceId);
+  pinnedGyms.splice(pinnedIdx, 1);
+  // Update marker colour back to default
+  const markerObj = markers.find(m => m.idx === g.gymIdx);
+  if (markerObj) markerObj.el.style.removeProperty('background');
+  if (selectedGymIdx === g.gymIdx) {
+    updateCompareBtn(g.gymIdx);
+    updateTravelButtons(g.gymIdx);
+    document.getElementById('iso-clear').classList.remove('visible');
+    document.getElementById('iso-status').textContent = '';
+  }
+  renderComparisonTray();
+}
+
+function renderComparisonTray() {
+  const tray = document.getElementById('comparison-tray');
+  tray.innerHTML = '';
+  pinnedGyms.forEach((g, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'compare-chip';
+    const modeLabel = g.mode ? { walking:'Walking', cycling:'Cycling', driving:'Driving' }[g.mode] : 'No zone yet';
+    chip.innerHTML = `
+      <div class="compare-dot" style="background:${g.color.fill}"></div>
+      <div class="compare-info">
+        <div class="compare-name">${g.gymName}</div>
+        <div class="compare-mode">${modeLabel}</div>
+      </div>
+      <button class="compare-remove" onclick="removePinnedGym(${i})" title="Remove">✕</button>
+    `;
+    tray.appendChild(chip);
+  });
+}
+
+// ── TRAVEL ZONES ──────────────────────────────────────────
+async function fetchTravel(mode) {
+  if (!selectedGym || selectedGymIdx === null) return;
+
+  // Auto-pin if not pinned
+  let pinned = pinnedGyms.find(g => g.gymIdx === selectedGymIdx);
+  if (!pinned) {
+    if (pinnedGyms.length >= 3) {
+      document.getElementById('iso-status').textContent = '⚠ Comparison is full (3 gyms max). Remove one first.';
+      return;
+    }
+    const slotIdx = getNextSlot();
+    pinned = {
+      gymIdx:   selectedGymIdx,
+      gymName:  selectedGym.properties.name,
+      color:    SLOT_COLORS[slotIdx],
+      slotIdx,
+      mode:     null,
+      sourceId: `travel-src-${slotIdx}`,
+      fillId:   `travel-fill-${slotIdx}`,
+      lineId:   `travel-line-${slotIdx}`,
+    };
+    pinnedGyms.push(pinned);
+    updateCompareBtn(selectedGymIdx);
+    renderComparisonTray();
+  }
+
+  // Toggle: clicking same mode on same gym clears it
+  if (pinned.mode === mode) {
+    clearGymTravel();
+    return;
+  }
+
+  pinned.mode = mode;
+  updateTravelButtons(selectedGymIdx);
+  renderComparisonTray();
 
   const [lng, lat] = selectedGym.geometry.coordinates;
-  const mapboxMode = mode;
+  document.getElementById('iso-status').innerHTML = `<span class="spinner"></span> Fetching ${mode} zone…`;
 
-  ['btn-walk','btn-cycle','btn-drive'].forEach(id => document.getElementById(id).className = 'iso-btn');
-  const btnMap = { walking: 'btn-walk', cycling: 'btn-cycle', driving: 'btn-drive' };
-  document.getElementById(btnMap[mode]).className = `iso-btn active-${mode === 'walking' ? 'walk' : mode === 'cycling' ? 'cycle' : 'drive'}`;
-  document.getElementById('iso-status').innerHTML = `<span class="spinner"></span> Fetching ${mode} isochrone…`;
-
-  const url = `https://api.mapbox.com/isochrone/v1/mapbox/${mapboxMode}/${lng},${lat}?contours_minutes=20&polygons=true&access_token=${MAPBOX_TOKEN}`;
+  const url = `https://api.mapbox.com/isochrone/v1/mapbox/${mode}/${lng},${lat}?contours_minutes=20&polygons=true&access_token=${MAPBOX_TOKEN}`;
   try {
     const resp = await fetch(url);
     const data = await resp.json();
     if (!data.features || data.features.length === 0) throw new Error('No data');
 
-    const colors = ISO_COLORS[mode];
-    if (!map.getSource('isochrone')) {
-      map.addSource('isochrone', { type: 'geojson', data });
-      map.addLayer({ id: 'isochrone-fill', type: 'fill', source: 'isochrone',
-        paint: { 'fill-color': colors.fill, 'fill-opacity': 0.22 }
-      });
-      map.addLayer({ id: 'isochrone-line', type: 'line', source: 'isochrone',
-        paint: { 'line-color': colors.line, 'line-width': 2, 'line-opacity': 0.8 }
-      });
+    if (map.getSource(pinned.sourceId)) {
+      map.getSource(pinned.sourceId).setData(data);
+      map.setPaintProperty(pinned.fillId, 'fill-color', pinned.color.fill);
+      map.setPaintProperty(pinned.lineId, 'line-color', pinned.color.line);
     } else {
-      map.getSource('isochrone').setData(data);
-      map.setPaintProperty('isochrone-fill', 'fill-color', colors.fill);
-      map.setPaintProperty('isochrone-line', 'line-color', colors.line);
+      map.addSource(pinned.sourceId, { type: 'geojson', data });
+      map.addLayer({ id: pinned.fillId, type: 'fill', source: pinned.sourceId,
+        paint: { 'fill-color': pinned.color.fill, 'fill-opacity': 0.22 }
+      });
+      map.addLayer({ id: pinned.lineId, type: 'line', source: pinned.sourceId,
+        paint: { 'line-color': pinned.color.line, 'line-width': 2, 'line-opacity': 0.85 }
+      });
     }
 
-    document.getElementById('iso-status').textContent = `Showing 20-min ${mode} zone`;
+    document.getElementById('iso-status').textContent = `20-min ${mode} zone`;
     document.getElementById('iso-clear').classList.add('visible');
+    updateTravelButtons(selectedGymIdx);
 
     const coords = data.features[0].geometry.coordinates[0];
     const bounds = coords.reduce((b, c) => b.extend(c), new mapboxgl.LngLatBounds(coords[0], coords[0]));
     map.fitBounds(bounds, { padding: 60, maxZoom: 14, duration: 800 });
 
   } catch (err) {
-    document.getElementById('iso-status').textContent = '⚠ Could not load isochrone.';
+    document.getElementById('iso-status').textContent = '⚠ Could not load travel zone.';
     console.error(err);
   }
 }
 
-function clearIsochrone(resetBtn = true) {
-  activeIsoMode = null;
-  if (map.getLayer('isochrone-fill')) map.removeLayer('isochrone-fill');
-  if (map.getLayer('isochrone-line')) map.removeLayer('isochrone-line');
-  if (map.getSource('isochrone')) map.removeSource('isochrone');
+function clearGymTravel() {
+  if (selectedGymIdx === null) return;
+  const pinned = pinnedGyms.find(g => g.gymIdx === selectedGymIdx);
+  if (!pinned) return;
+  if (map.getLayer(pinned.fillId)) map.removeLayer(pinned.fillId);
+  if (map.getLayer(pinned.lineId)) map.removeLayer(pinned.lineId);
+  if (map.getSource(pinned.sourceId)) map.removeSource(pinned.sourceId);
+  pinned.mode = null;
   document.getElementById('iso-clear').classList.remove('visible');
   document.getElementById('iso-status').textContent = '';
-  if (resetBtn) {
-    ['btn-walk','btn-cycle','btn-drive'].forEach(id => document.getElementById(id).className = 'iso-btn');
+  updateTravelButtons(selectedGymIdx);
+  renderComparisonTray();
+}
+
+// ── TRANSPORT STOPS ───────────────────────────────────────
+function getTransportIcon(tags) {
+  if (tags.station === 'subway' || tags.subway === 'yes' || tags.network === 'London Underground') return '🚇';
+  if (tags.railway === 'tram_stop') return '🚃';
+  if (tags.light_rail === 'yes' || tags.station === 'light_rail') return '🚈';
+  if (tags.railway === 'station' || tags.railway === 'halt') return '🚂';
+  return '🚌';
+}
+
+async function fetchTransportStops(lat, lng) {
+  const statusEl = document.getElementById('transport-stops-status');
+  statusEl.textContent = 'Loading nearby stops…';
+  const query = `[out:json][timeout:15];
+(
+  node["highway"="bus_stop"](around:600,${lat},${lng});
+  node["railway"="station"](around:600,${lat},${lng});
+  node["railway"="halt"](around:600,${lat},${lng});
+  node["railway"="tram_stop"](around:600,${lat},${lng});
+  node["station"="subway"](around:600,${lat},${lng});
+);
+out body;`;
+  try {
+    const resp = await fetch('https://overpass-api.de/api/interpreter', {
+      method: 'POST',
+      body: 'data=' + encodeURIComponent(query)
+    });
+    const data = await resp.json();
+    if (!data.elements || data.elements.length === 0) {
+      statusEl.textContent = 'No stops found within 600m.';
+      return;
+    }
+    // Deduplicate: skip unnamed stops of same type if a named one already placed very nearby
+    const seen = new Set();
+    data.elements.forEach(el => {
+      const icon = getTransportIcon(el.tags);
+      const name = el.tags.name || '';
+      const key = `${icon}-${name}`;
+      if (seen.has(key) && name) return;
+      seen.add(key);
+      const div = document.createElement('div');
+      div.className = 'transport-marker';
+      div.textContent = icon;
+      div.title = name || icon;
+      const m = new mapboxgl.Marker({ element: div, anchor: 'center' })
+        .setLngLat([el.lon, el.lat])
+        .addTo(map);
+      transportMarkers.push(m);
+    });
+    const c = transportMarkers.length;
+    statusEl.textContent = c > 0 ? `${c} stop${c !== 1 ? 's' : ''} within 600m` : 'No stops found within 600m.';
+  } catch (err) {
+    statusEl.textContent = 'Could not load nearby stops.';
+    console.warn('Transport stops error:', err);
   }
+}
+
+function clearTransportMarkers() {
+  transportMarkers.forEach(m => m.remove());
+  transportMarkers = [];
 }
 
 // ── FILTERS ───────────────────────────────────────────────
@@ -690,7 +1079,8 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
     buildMarkers();
     if (activeFilter !== 'all') {
       document.getElementById('panel').classList.remove('open');
-      clearIsochrone();
+      document.body.classList.remove('panel-open-mobile');
+      clearTransportMarkers();
     }
   });
 });
@@ -735,17 +1125,15 @@ searchResults.addEventListener('click', e => {
 });
 
 document.addEventListener('click', e => {
-  if (!e.target.closest('#search-wrap')) {
-    searchResults.classList.remove('open');
-  }
+  if (!e.target.closest('#search-wrap')) searchResults.classList.remove('open');
 });
 
 // ── STARTUP ───────────────────────────────────────────────
 map.on('load', () => {
-  if (GYMS) buildMarkers(); // data already fetched before map loaded
+  if (GYMS) buildMarkers();
 });
 
-loadGyms(); // kick off data fetch immediately (parallel with map load)
+loadGyms();
 
 </script>
 </body>
