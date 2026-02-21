@@ -249,6 +249,20 @@
   .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; font-size: 0.75rem; color: #3a3a30; }
   .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 
+  /* ── CLEAR SELECTION BUTTON ──────────────────────────── */
+  #clear-selection-btn {
+    display: none;
+    padding: 6px 14px; border-radius: 20px;
+    border: 1.5px solid rgba(200,184,154,0.6);
+    background: rgba(247,243,236,0.93); backdrop-filter: blur(8px);
+    color: var(--stone); font-family: 'DM Sans', sans-serif;
+    font-size: 0.72rem; font-weight: 500;
+    cursor: pointer; transition: all 0.15s;
+    box-shadow: var(--shadow);
+  }
+  #clear-selection-btn:hover { border-color: #c0392b; color: #c0392b; }
+  #clear-selection-btn.visible { display: block; }
+
   /* ── COUNT BADGE ─────────────────────────────────────── */
   #count-badge {
     position: fixed; bottom: 28px; right: 16px; z-index: 50;
@@ -538,6 +552,7 @@
 <!-- BOTTOM-LEFT: comparison tray stacked above legend -->
 <div id="bottom-left-stack">
   <div id="comparison-tray"></div>
+  <button id="clear-selection-btn" onclick="clearSelection()">✕ Clear selection</button>
   <div id="legend">
     <h5>Travel Zones</h5>
     <div class="legend-item"><div class="legend-dot" style="background:#d4581a;opacity:0.8"></div> Gym 1</div>
@@ -550,11 +565,28 @@
 <div id="count-badge"><span id="visible-count">314</span> gyms</div>
 
 <script>
+// ═══════════════════════════════════════════════════════════════
+//  SECURITY — referrer check
+//  Replace both values below with your Squarespace domain and
+//  the URL of your paywall/members page.
+//  Visitors who load the GitHub URL directly (not via your
+//  Squarespace embed) will be redirected to your paywall.
+// ═══════════════════════════════════════════════════════════════
+(function() {
+  var ALLOWED_REFERRER = 'yoursite.squarespace.com'; // ← change this
+  var PAYWALL_URL      = 'https://yoursite.squarespace.com/members'; // ← change this
+  var ref = document.referrer;
+  var isLocal = window.location.hostname === 'localhost' ||
+                window.location.hostname === '127.0.0.1';
+  if (!isLocal && (ref === '' || !ref.includes(ALLOWED_REFERRER))) {
+    window.location.replace(PAYWALL_URL);
+  }
+})();
 
 // ═══════════════════════════════════════════════════════════════
 //  CONFIG — update this URL when you change your Google Sheet
 // ═══════════════════════════════════════════════════════════════
-const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSwsrCp7nnygovZ1ZpsYbKjMZDyxBd3FLTPW2_nDWkLDqGfzVrqNoVjmErn1VkjrryYFvrjjNjHEejt/pub?gid=852920628&single=true&output=csv';
+const SHEET_CSV_URL = 'YOUR_GOOGLE_SHEET_CSV_URL_HERE';
 // How to get this URL:
 //   1. In Google Sheets: File → Share → Publish to web
 //   2. Select your sheet tab, choose "Comma-separated values (.csv)"
@@ -586,6 +618,11 @@ let transportMarkers = [];
 // Comparison: up to 3 pinned gyms, each with a colour slot
 // { gymIdx, gymName, color, lineColor, mode, sourceId, fillId, lineId }
 let pinnedGyms = [];
+
+// Preview travel zone (non-pinned) — shown without adding to comparison
+// { gymIdx, mode } – uses fixed layer IDs travel-src/fill/line-preview
+let previewTravel = null;
+const PREVIEW_TRAVEL = { sourceId: 'travel-src-preview', fillId: 'travel-fill-preview', lineId: 'travel-line-preview', fill: 'rgba(100,110,130,0.22)', line: '#5a6070' };
 const SLOT_COLORS = [
   { fill: '#d4581a', line: '#a03a0a' }, // orange
   { fill: '#1a8a7a', line: '#0d5c52' }, // teal
@@ -735,10 +772,13 @@ function selectGym(idx, el) {
   selectedGym = GYMS.features[idx];
   selectedGymIdx = idx;
   clearTransportMarkers();
+  // Clear preview from previous gym if different gym
+  if (previewTravel && previewTravel.gymIdx !== idx) clearPreviewTravel();
   showPanel(selectedGym.properties, idx);
   map.flyTo({ center: selectedGym.geometry.coordinates, zoom: Math.max(map.getZoom(), 13), duration: 800 });
   const [lng, lat] = selectedGym.geometry.coordinates;
   fetchTransportStops(lat, lng);
+  document.getElementById('clear-selection-btn').classList.add('visible');
 }
 
 // ── PANEL ─────────────────────────────────────────────────
@@ -816,8 +856,9 @@ function updateCompareBtn(idx) {
 
 function updateTravelButtons(idx) {
   const pinned = pinnedGyms.find(g => g.gymIdx === idx);
+  const preview = previewTravel && previewTravel.gymIdx === idx ? previewTravel : null;
   const color = pinned ? pinned.color.fill : null;
-  const mode  = pinned ? pinned.mode : null;
+  const mode  = pinned ? pinned.mode : (preview ? preview.mode : null);
   ['btn-walk','btn-cycle','btn-drive'].forEach(id => {
     const btn = document.getElementById(id);
     btn.className = 'iso-btn';
@@ -832,11 +873,11 @@ function updateTravelButtons(idx) {
       if (color) activeBtn.style.setProperty('--slot-color', color);
     }
   }
-  const hasTravelZone = !!pinned && !!pinned.mode;
+  const hasTravelZone = (!!pinned && !!pinned.mode) || !!preview;
   document.getElementById('iso-clear').classList.toggle('visible', hasTravelZone);
 }
 
-document.getElementById('panel-close').addEventListener('click', () => {
+function clearSelection() {
   document.getElementById('panel').classList.remove('open');
   document.body.classList.remove('panel-open-mobile');
   if (selectedMarker) selectedMarker.classList.remove('selected');
@@ -844,7 +885,13 @@ document.getElementById('panel-close').addEventListener('click', () => {
   selectedGym = null;
   selectedGymIdx = null;
   clearTransportMarkers();
-});
+  clearPreviewTravel();
+  document.getElementById('iso-clear').classList.remove('visible');
+  document.getElementById('iso-status').textContent = '';
+  document.getElementById('clear-selection-btn').classList.remove('visible');
+}
+
+document.getElementById('panel-close').addEventListener('click', clearSelection);
 
 // ── COMPARISON ────────────────────────────────────────────
 function toggleCompare() {
@@ -855,6 +902,12 @@ function toggleCompare() {
   } else {
     if (pinnedGyms.length >= 3) return;
     const slotIdx = getNextSlot();
+    const hadPreview = previewTravel && previewTravel.gymIdx === selectedGymIdx;
+    const savedMode = hadPreview ? previewTravel.mode : null;
+
+    // Clear preview layers before creating pinned layers with same gym
+    if (hadPreview) clearPreviewTravel();
+
     pinnedGyms.push({
       gymIdx:   selectedGymIdx,
       gymName:  selectedGym.properties.name,
@@ -868,6 +921,9 @@ function toggleCompare() {
     updateCompareBtn(selectedGymIdx);
     updateTravelButtons(selectedGymIdx);
     renderComparisonTray();
+
+    // Re-fetch travel zone in pinned colour if one was showing
+    if (savedMode) fetchTravel(savedMode);
   }
 }
 
@@ -919,39 +975,38 @@ function renderComparisonTray() {
 async function fetchTravel(mode) {
   if (!selectedGym || selectedGymIdx === null) return;
 
-  // Auto-pin if not pinned
-  let pinned = pinnedGyms.find(g => g.gymIdx === selectedGymIdx);
-  if (!pinned) {
-    if (pinnedGyms.length >= 3) {
-      document.getElementById('iso-status').textContent = '⚠ Comparison is full (3 gyms max). Remove one first.';
+  const pinned = pinnedGyms.find(g => g.gymIdx === selectedGymIdx);
+
+  if (pinned) {
+    // Gym is in comparison — use its pinned slot
+    // Toggle: clicking same mode clears it
+    if (pinned.mode === mode) {
+      clearGymTravel();
       return;
     }
-    const slotIdx = getNextSlot();
-    pinned = {
-      gymIdx:   selectedGymIdx,
-      gymName:  selectedGym.properties.name,
-      color:    SLOT_COLORS[slotIdx],
-      slotIdx,
-      mode:     null,
-      sourceId: `travel-src-${slotIdx}`,
-      fillId:   `travel-fill-${slotIdx}`,
-      lineId:   `travel-line-${slotIdx}`,
-    };
-    pinnedGyms.push(pinned);
-    updateCompareBtn(selectedGymIdx);
+    pinned.mode = mode;
+    updateTravelButtons(selectedGymIdx);
     renderComparisonTray();
+    await drawTravelZone(pinned.sourceId, pinned.fillId, pinned.lineId, pinned.color.fill, pinned.color.line, mode);
+  } else {
+    // Gym NOT in comparison — use preview layer (no comparison add)
+    // Clear any previous preview first
+    clearPreviewTravel();
+
+    // Toggle: clicking same mode on same gym in preview clears it
+    if (previewTravel && previewTravel.gymIdx === selectedGymIdx && previewTravel.mode === mode) {
+      previewTravel = null;
+      updateTravelButtons(selectedGymIdx);
+      return;
+    }
+
+    previewTravel = { gymIdx: selectedGymIdx, mode };
+    updateTravelButtons(selectedGymIdx);
+    await drawTravelZone(PREVIEW_TRAVEL.sourceId, PREVIEW_TRAVEL.fillId, PREVIEW_TRAVEL.lineId, PREVIEW_TRAVEL.fill, PREVIEW_TRAVEL.line, mode);
   }
+}
 
-  // Toggle: clicking same mode on same gym clears it
-  if (pinned.mode === mode) {
-    clearGymTravel();
-    return;
-  }
-
-  pinned.mode = mode;
-  updateTravelButtons(selectedGymIdx);
-  renderComparisonTray();
-
+async function drawTravelZone(sourceId, fillId, lineId, fillColor, lineColor, mode) {
   const [lng, lat] = selectedGym.geometry.coordinates;
   document.getElementById('iso-status').innerHTML = `<span class="spinner"></span> Fetching ${mode} zone…`;
 
@@ -961,17 +1016,17 @@ async function fetchTravel(mode) {
     const data = await resp.json();
     if (!data.features || data.features.length === 0) throw new Error('No data');
 
-    if (map.getSource(pinned.sourceId)) {
-      map.getSource(pinned.sourceId).setData(data);
-      map.setPaintProperty(pinned.fillId, 'fill-color', pinned.color.fill);
-      map.setPaintProperty(pinned.lineId, 'line-color', pinned.color.line);
+    if (map.getSource(sourceId)) {
+      map.getSource(sourceId).setData(data);
+      map.setPaintProperty(fillId, 'fill-color', fillColor);
+      map.setPaintProperty(lineId, 'line-color', lineColor);
     } else {
-      map.addSource(pinned.sourceId, { type: 'geojson', data });
-      map.addLayer({ id: pinned.fillId, type: 'fill', source: pinned.sourceId,
-        paint: { 'fill-color': pinned.color.fill, 'fill-opacity': 0.22 }
+      map.addSource(sourceId, { type: 'geojson', data });
+      map.addLayer({ id: fillId, type: 'fill', source: sourceId,
+        paint: { 'fill-color': fillColor, 'fill-opacity': 0.22 }
       });
-      map.addLayer({ id: pinned.lineId, type: 'line', source: pinned.sourceId,
-        paint: { 'line-color': pinned.color.line, 'line-width': 2, 'line-opacity': 0.85 }
+      map.addLayer({ id: lineId, type: 'line', source: sourceId,
+        paint: { 'line-color': lineColor, 'line-width': 2, 'line-opacity': 0.85 }
       });
     }
 
@@ -989,18 +1044,28 @@ async function fetchTravel(mode) {
   }
 }
 
+function clearPreviewTravel() {
+  if (map.getLayer(PREVIEW_TRAVEL.fillId)) map.removeLayer(PREVIEW_TRAVEL.fillId);
+  if (map.getLayer(PREVIEW_TRAVEL.lineId)) map.removeLayer(PREVIEW_TRAVEL.lineId);
+  if (map.getSource(PREVIEW_TRAVEL.sourceId)) map.removeSource(PREVIEW_TRAVEL.sourceId);
+  previewTravel = null;
+}
+
 function clearGymTravel() {
   if (selectedGymIdx === null) return;
   const pinned = pinnedGyms.find(g => g.gymIdx === selectedGymIdx);
-  if (!pinned) return;
-  if (map.getLayer(pinned.fillId)) map.removeLayer(pinned.fillId);
-  if (map.getLayer(pinned.lineId)) map.removeLayer(pinned.lineId);
-  if (map.getSource(pinned.sourceId)) map.removeSource(pinned.sourceId);
-  pinned.mode = null;
+  if (pinned) {
+    if (map.getLayer(pinned.fillId)) map.removeLayer(pinned.fillId);
+    if (map.getLayer(pinned.lineId)) map.removeLayer(pinned.lineId);
+    if (map.getSource(pinned.sourceId)) map.removeSource(pinned.sourceId);
+    pinned.mode = null;
+    renderComparisonTray();
+  } else {
+    clearPreviewTravel();
+  }
   document.getElementById('iso-clear').classList.remove('visible');
   document.getElementById('iso-status').textContent = '';
   updateTravelButtons(selectedGymIdx);
-  renderComparisonTray();
 }
 
 // ── TRANSPORT STOPS ───────────────────────────────────────
