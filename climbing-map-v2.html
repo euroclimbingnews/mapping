@@ -228,9 +228,15 @@
     font-style: italic;
   }
 
+  /* ── BOTTOM-LEFT STACK ───────────────────────────────── */
+  #bottom-left-stack {
+    position: fixed; bottom: 28px; left: 16px; z-index: 50;
+    display: flex; flex-direction: column; gap: 8px;
+    align-items: flex-start;
+  }
+
   /* ── LEGEND ──────────────────────────────────────────── */
   #legend {
-    position: fixed; bottom: 28px; left: 16px; z-index: 50;
     background: rgba(247,243,236,0.93); backdrop-filter: blur(8px);
     border-radius: var(--radius); padding: 12px 16px;
     box-shadow: var(--shadow); border: 1px solid rgba(200,184,154,0.5);
@@ -328,7 +334,6 @@
 
   /* ── COMPARISON TRAY ─────────────────────────────────── */
   #comparison-tray {
-    position: fixed; bottom: 28px; left: 16px; z-index: 50;
     display: flex; flex-direction: column; gap: 6px;
   }
   #comparison-tray:empty { display: none; }
@@ -430,7 +435,7 @@
     .gym-marker { width: 18px; height: 18px; border-width: 3px; }
 
     /* Hide legend on mobile — info is in the panel */
-    #legend { display: none; }
+    #bottom-left-stack { display: none; }
 
     /* Count badge: smaller, tucked into corner */
     #count-badge {
@@ -530,26 +535,43 @@
   </div>
 </div>
 
-<!-- COMPARISON TRAY -->
-<div id="comparison-tray"></div>
-
-<!-- LEGEND -->
-<div id="legend">
-  <h5>Travel Zones</h5>
-  <div class="legend-item"><div class="legend-dot" style="background:#d4581a;opacity:0.8"></div> Gym 1</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#1a8a7a;opacity:0.8"></div> Gym 2</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#7c3aed;opacity:0.8"></div> Gym 3</div>
+<!-- BOTTOM-LEFT: comparison tray stacked above legend -->
+<div id="bottom-left-stack">
+  <div id="comparison-tray"></div>
+  <div id="legend">
+    <h5>Travel Zones</h5>
+    <div class="legend-item"><div class="legend-dot" style="background:#d4581a;opacity:0.8"></div> Gym 1</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#1a8a7a;opacity:0.8"></div> Gym 2</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#7c3aed;opacity:0.8"></div> Gym 3</div>
+  </div>
 </div>
 
 <!-- COUNT -->
 <div id="count-badge"><span id="visible-count">314</span> gyms</div>
 
 <script>
+// ═══════════════════════════════════════════════════════════════
+//  SECURITY — referrer check
+//  Replace both values below with your Squarespace domain and
+//  the URL of your paywall/members page.
+//  Visitors who load the GitHub URL directly (not via your
+//  Squarespace embed) will be redirected to your paywall.
+// ═══════════════════════════════════════════════════════════════
+(function() {
+  var ALLOWED_REFERRER = 'yoursite.squarespace.com'; // ← change this
+  var PAYWALL_URL      = 'https://yoursite.squarespace.com/members'; // ← change this
+  var ref = document.referrer;
+  var isLocal = window.location.hostname === 'localhost' ||
+                window.location.hostname === '127.0.0.1';
+  if (!isLocal && (ref === '' || !ref.includes(ALLOWED_REFERRER))) {
+    window.location.replace(PAYWALL_URL);
+  }
+})();
 
 // ═══════════════════════════════════════════════════════════════
 //  CONFIG — update this URL when you change your Google Sheet
 // ═══════════════════════════════════════════════════════════════
-const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSwsrCp7nnygovZ1ZpsYbKjMZDyxBd3FLTPW2_nDWkLDqGfzVrqNoVjmErn1VkjrryYFvrjjNjHEejt/pub?gid=852920628&single=true&output=csv';
+const SHEET_CSV_URL = 'YOUR_GOOGLE_SHEET_CSV_URL_HERE';
 // How to get this URL:
 //   1. In Google Sheets: File → Share → Publish to web
 //   2. Select your sheet tab, choose "Comma-separated values (.csv)"
