@@ -545,6 +545,23 @@
 <div id="count-badge"><span id="visible-count">314</span> gyms</div>
 
 <script>
+// ═══════════════════════════════════════════════════════════════
+//  SECURITY — referrer check
+//  Replace both values below with your Squarespace domain and
+//  the URL of your paywall/members page.
+//  Visitors who load the GitHub URL directly (not via your
+//  Squarespace embed) will be redirected to your paywall.
+// ═══════════════════════════════════════════════════════════════
+(function() {
+  var ALLOWED_REFERRER = 'yoursite.squarespace.com'; // ← change this
+  var PAYWALL_URL      = 'https://yoursite.squarespace.com/members'; // ← change this
+  var ref = document.referrer;
+  var isLocal = window.location.hostname === 'localhost' ||
+                window.location.hostname === '127.0.0.1';
+  if (!isLocal && (ref === '' || !ref.includes(ALLOWED_REFERRER))) {
+    window.location.replace(PAYWALL_URL);
+  }
+})();
 
 // ═══════════════════════════════════════════════════════════════
 //  CONFIG — update this URL when you change your Google Sheet
@@ -590,29 +607,36 @@ const SLOT_COLORS = [
 // ── CSV PARSER ────────────────────────────────────────────
 function parseCSV(text) {
   const lines = text.trim().split('\n');
-  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
 
-  const features = [];
-  for (let i = 1; i < lines.length; i++) {
-    // Handle quoted fields with commas inside
+  // Auto-detect delimiter: tab or comma
+  const firstLine = lines[0];
+  const delimiter = firstLine.includes('\t') ? '\t' : ',';
+
+  // Parse a single line respecting quoted fields (comma mode only)
+  function parseLine(line) {
+    if (delimiter === '\t') return line.split('\t').map(v => v.trim().replace(/^"|"$/g, ''));
     const row = [];
-    let current = '';
-    let inQuotes = false;
-    for (let c = 0; c < lines[i].length; c++) {
-      const ch = lines[i][c];
+    let current = '', inQuotes = false;
+    for (let c = 0; c < line.length; c++) {
+      const ch = line[c];
       if (ch === '"') { inQuotes = !inQuotes; }
       else if (ch === ',' && !inQuotes) { row.push(current.trim()); current = ''; }
       else { current += ch; }
     }
     row.push(current.trim());
+    return row;
+  }
 
-    // Map CSV columns to property names
-    // Expected headers: Name, Address, Latitude, Longitude, Website, Phone,
-    //                   Place ID, Country, Café, Ropes, Boulders, Speed,
-    //                   Moon/Kilter/TB, Training Space, Kids Zone, Retail,
-    //                   Public Transport, Parking, Peak Entry Price
+  const headers = parseLine(firstLine).map(h => h.replace(/^"|"$/g, '').trim());
+  console.log('CSV headers detected:', headers);
+
+  const features = [];
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const row = parseLine(lines[i]);
+
     const get = (colName) => {
-      const idx = headers.findIndex(h => h.toLowerCase() === colName.toLowerCase());
+      const idx = headers.findIndex(h => h.toLowerCase().trim() === colName.toLowerCase().trim());
       return idx >= 0 ? (row[idx] || '').trim() : '';
     };
 
