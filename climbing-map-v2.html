@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECN Climbing Gym Map — UK & Ireland</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --forest:   #2a4520;
+    --forest-m: #3a5e2e;
+    --stone:    #6b6b5e;
+    --cream:    #f7f3ec;
+    --warm:     #ede8df;
+    --orange:   #d4581a;
+    --sand:     #c8b89a;
+    --white:    #ffffff;
+    --shadow:   0 4px 24px rgba(0,0,0,0.13);
+    --radius:   12px;
+  }
+
+  html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1a1a18; overflow: hidden; }
+
+  /* ── HEADER ─────────────────────────────────────────── */
+  #header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: var(--forest);
+    display: flex; align-items: center; gap: 16px;
+    padding: 0 20px; height: 58px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+  }
+  #header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.15rem; color: var(--cream); letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+  #header h1 span { color: var(--sand); }
+
+  .header-pill {
+    background: rgba(255,255,255,0.12);
+    color: var(--cream); font-size: 0.72rem; font-weight: 500;
+    padding: 3px 10px; border-radius: 20px; letter-spacing: 0.04em;
+  }
+
+  /* Search bar in header */
+  #search-wrap {
+    flex: 1; max-width: 340px; margin-left: auto;
+    position: relative;
+  }
+  #gym-search {
+    width: 100%; padding: 8px 16px 8px 36px;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 20px; color: var(--white);
+    font-size: 0.85rem; font-family: 'DM Sans', sans-serif;
+    outline: none; transition: background 0.2s, border-color 0.2s;
+  }
+  #gym-search::placeholder { color: rgba(255,255,255,0.55); }
+  #gym-search:focus { background: rgba(255,255,255,0.22); border-color: rgba(255,255,255,0.5); }
+  #search-icon {
+    position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+    color: rgba(255,255,255,0.6); font-size: 0.95rem; pointer-events: none;
+  }
+  #search-results {
+    position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+    background: var(--white); border-radius: var(--radius);
+    box-shadow: var(--shadow); overflow: hidden; max-height: 280px; overflow-y: auto;
+    display: none; z-index: 200;
+  }
+  #search-results.open { display: block; }
+  .search-item {
+    padding: 10px 16px; cursor: pointer; font-size: 0.85rem;
+    border-bottom: 1px solid #f0ece6; transition: background 0.15s;
+  }
+  .search-item:last-child { border-bottom: none; }
+  .search-item:hover { background: var(--warm); }
+  .search-item strong { display: block; color: var(--forest); }
+  .search-item small { color: var(--stone); font-size: 0.75rem; }
+
+  /* ── MAP ─────────────────────────────────────────────── */
+  #map {
+    position: fixed; top: 58px; left: 0; right: 0; bottom: 0;
+  }
+
+  /* ── FILTER BAR ──────────────────────────────────────── */
+  #filters {
+    position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
+    z-index: 50; display: flex; gap: 8px; flex-wrap: nowrap;
+    background: rgba(247,243,236,0.92);
+    backdrop-filter: blur(8px);
+    border-radius: 30px;
+    padding: 7px 12px;
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(200,184,154,0.5);
+  }
+  .filter-btn {
+    padding: 5px 13px; border-radius: 20px; border: 1.5px solid var(--sand);
+    background: transparent; font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem; font-weight: 500; color: var(--stone);
+    cursor: pointer; transition: all 0.18s; white-space: nowrap;
+  }
+  .filter-btn:hover { border-color: var(--forest-m); color: var(--forest); }
+  .filter-btn.active { background: var(--forest); color: var(--white); border-color: var(--forest); }
+  .filter-btn.danger { border-color: #c0392b; color: #c0392b; }
+  .filter-btn.danger:hover { background: #c0392b; color: var(--white); }
+
+  /* ── SIDEBAR PANEL ───────────────────────────────────── */
+  #panel {
+    position: fixed; top: 58px; right: 0; bottom: 0;
+    width: 340px; background: var(--cream);
+    transform: translateX(100%); transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+    z-index: 80; display: flex; flex-direction: column;
+    border-left: 1px solid var(--sand);
+    box-shadow: -6px 0 30px rgba(0,0,0,0.12);
+  }
+  #panel.open { transform: translateX(0); }
+
+  #panel-close {
+    position: absolute; top: 14px; right: 14px;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--warm); border: 1.5px solid var(--sand);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; color: var(--stone); transition: all 0.15s; z-index: 2;
+  }
+  #panel-close:hover { background: var(--forest); color: var(--white); border-color: var(--forest); }
+
+  #panel-header {
+    padding: 22px 20px 16px;
+    border-bottom: 1px solid var(--sand);
+    background: var(--forest);
+    flex-shrink: 0;
+  }
+  #panel-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.25rem; color: var(--white);
+    line-height: 1.3; padding-right: 36px;
+  }
+  #panel-address {
+    font-size: 0.78rem; color: rgba(255,255,255,0.65);
+    margin-top: 6px; line-height: 1.4;
+  }
+
+  #panel-body { flex: 1; overflow-y: auto; padding: 18px 20px; }
+
+  /* Price badge */
+  .price-badge {
+    display: inline-block;
+    background: var(--orange); color: var(--white);
+    font-size: 0.85rem; font-weight: 600;
+    padding: 4px 12px; border-radius: 20px; margin-bottom: 14px;
+  }
+  .price-badge.unknown { background: var(--stone); }
+
+  /* Amenity tags */
+  .amenity-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+  .tag {
+    display: flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 500;
+  }
+  .tag.yes { background: #e8f2e4; color: #2a5e1e; }
+  .tag.no  { background: #f0ede8; color: #9a9080; }
+
+  /* Transport */
+  .transport-section { margin-bottom: 18px; }
+  .transport-section h4 { font-size: 0.72rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--stone); margin-bottom: 6px; }
+  .transport-pills { display: flex; flex-wrap: wrap; gap: 5px; }
+  .transport-pill {
+    padding: 3px 9px; background: var(--warm); border: 1px solid var(--sand);
+    border-radius: 6px; font-size: 0.72rem; color: var(--stone); font-weight: 500;
+  }
+
+  /* Links */
+  #panel-links { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+  .panel-link {
+    flex: 1; min-width: 120px;
+    padding: 8px 12px; border-radius: var(--radius);
+    background: var(--warm); border: 1.5px solid var(--sand);
+    text-decoration: none; font-size: 0.78rem; font-weight: 500; color: var(--forest);
+    text-align: center; transition: all 0.15s; cursor: pointer;
+  }
+  .panel-link:hover { background: var(--forest); color: var(--white); border-color: var(--forest); }
+
+  /* ── ISOCHRONE SECTION ───────────────────────────────── */
+  .iso-section { margin-top: 4px; }
+  .iso-section h4 {
+    font-size: 0.72rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--stone); margin-bottom: 10px;
+  }
+
+  #iso-buttons { display: flex; gap: 8px; margin-bottom: 10px; }
+  .iso-btn {
+    flex: 1; padding: 9px 6px; border-radius: 10px;
+    border: 2px solid var(--sand);
+    background: var(--white); font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem; font-weight: 600; color: var(--stone);
+    cursor: pointer; transition: all 0.18s; text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+  }
+  .iso-btn .iso-icon { font-size: 1.1rem; }
+  .iso-btn:hover { border-color: var(--forest-m); color: var(--forest); }
+  .iso-btn.active-walk  { background: #e6f4e2; border-color: #4a8a3e; color: #2a5e1e; }
+  .iso-btn.active-cycle { background: #e2eff7; border-color: #2e7dba; color: #1a5c8a; }
+  .iso-btn.active-drive { background: #fef2e8; border-color: var(--orange); color: #a03a0a; }
+  .iso-btn.active-slot {
+    background: color-mix(in srgb, var(--slot-color, var(--orange)) 12%, white);
+    border-color: var(--slot-color, var(--orange));
+    color: var(--slot-color, var(--orange));
+  }
+
+  #iso-clear {
+    width: 100%; padding: 8px; border-radius: 8px;
+    border: 1.5px solid var(--sand); background: transparent;
+    font-family: 'DM Sans', sans-serif; font-size: 0.78rem;
+    color: var(--stone); cursor: pointer; transition: all 0.15s;
+    display: none;
+  }
+  #iso-clear:hover { border-color: #c0392b; color: #c0392b; }
+  #iso-clear.visible { display: block; }
+
+  #iso-status {
+    font-size: 0.75rem; color: var(--stone);
+    margin-top: 8px; text-align: center; min-height: 18px;
+    font-style: italic;
+  }
+
+  /* ── BOTTOM-LEFT STACK ───────────────────────────────── */
+  #bottom-left-stack {
+    position: fixed; bottom: 28px; left: 16px; z-index: 50;
+    display: flex; flex-direction: column; gap: 8px;
+    align-items: flex-start;
+  }
+
+  /* ── LEGEND ──────────────────────────────────────────── */
+  #legend {
+    background: rgba(247,243,236,0.93); backdrop-filter: blur(8px);
+    border-radius: var(--radius); padding: 12px 16px;
+    box-shadow: var(--shadow); border: 1px solid rgba(200,184,154,0.5);
+    min-width: 140px;
+  }
+  #legend h5 {
+    font-size: 0.68rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.1em; color: var(--stone); margin-bottom: 8px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; font-size: 0.75rem; color: #3a3a30; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ── CLEAR SELECTION BUTTON ──────────────────────────── */
+  #clear-selection-btn {
+    display: none;
+    padding: 6px 14px; border-radius: 20px;
+    border: 1.5px solid rgba(200,184,154,0.6);
+    background: rgba(247,243,236,0.93); backdrop-filter: blur(8px);
+    color: var(--stone); font-family: 'DM Sans', sans-serif;
+    font-size: 0.72rem; font-weight: 500;
+    cursor: pointer; transition: all 0.15s;
+    box-shadow: var(--shadow);
+  }
+  #clear-selection-btn:hover { border-color: #c0392b; color: #c0392b; }
+  #clear-selection-btn.visible { display: block; }
+
+  /* ── COUNT BADGE ─────────────────────────────────────── */
+  #count-badge {
+    position: fixed; bottom: 28px; right: 60px; z-index: 50;
+    background: var(--forest); color: var(--cream);
+    border-radius: var(--radius); padding: 10px 16px;
+    font-size: 0.78rem; font-weight: 500;
+    box-shadow: var(--shadow);
+  }
+  #count-badge span { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 700; }
+
+  /* ── MARKER STYLING ──────────────────────────────────── */
+  .gym-marker {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--orange); border: 2.5px solid var(--white);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+    cursor: pointer; transition: transform 0.15s;
+  }
+  .gym-marker:hover, .gym-marker.selected { transform: scale(1.5); }
+  .gym-marker.selected { background: var(--forest); }
+
+  /* loading spinner (inline iso use) */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner {
+    width: 16px; height: 16px; border: 2.5px solid var(--sand);
+    border-top-color: var(--forest); border-radius: 50%;
+    animation: spin 0.7s linear infinite; display: inline-block; vertical-align: middle;
+  }
+
+  /* ── LOADING OVERLAY ─────────────────────────────────── */
+  #loading-overlay {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(247,243,236,0.92); backdrop-filter: blur(6px);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 16px;
+  }
+  #loading-spinner {
+    width: 44px; height: 44px;
+    border: 4px solid var(--sand); border-top-color: var(--forest);
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+  }
+  #loading-msg {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem; color: var(--forest);
+  }
+  #loading-sub {
+    font-size: 0.8rem; color: var(--stone); text-align: center; max-width: 320px;
+  }
+
+  /* ── DRAG HANDLE (mobile panel) ──────────────────────── */
+  #panel-drag-handle {
+    display: none;
+    width: 36px; height: 4px; border-radius: 2px;
+    background: var(--sand); margin: 10px auto 0; flex-shrink: 0;
+  }
+
+  /* ── COMPARE BUTTON ──────────────────────────────────── */
+  #compare-btn {
+    display: inline-block; margin-top: 10px;
+    padding: 5px 14px; border-radius: 20px;
+    border: 1.5px solid rgba(255,255,255,0.35);
+    background: rgba(255,255,255,0.12);
+    color: var(--cream); font-family: 'DM Sans', sans-serif;
+    font-size: 0.72rem; font-weight: 500;
+    cursor: pointer; transition: all 0.15s;
+  }
+  #compare-btn:hover { background: rgba(255,255,255,0.22); border-color: rgba(255,255,255,0.6); }
+  #compare-btn.pinned { background: rgba(255,255,255,0.28); border-color: var(--white); font-weight: 600; }
+  #compare-btn.full { opacity: 0.5; cursor: not-allowed; }
+
+  /* ── TRANSPORT STOPS STATUS ──────────────────────────── */
+  #transport-stops-status {
+    font-size: 0.71rem; color: var(--stone); font-style: italic;
+    margin-top: 5px; min-height: 16px;
+  }
+
+  /* ── TRANSPORT STOP MARKERS ──────────────────────────── */
+  .transport-marker {
+    font-size: 17px; line-height: 1; cursor: default;
+    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.45));
+    transition: transform 0.12s;
+  }
+  .transport-marker:hover { transform: scale(1.25); }
+
+  /* ── COMPARISON TRAY ─────────────────────────────────── */
+  #comparison-tray {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  #comparison-tray:empty { display: none; }
+  .compare-chip {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(247,243,236,0.93); backdrop-filter: blur(8px);
+    border-radius: 10px; padding: 7px 10px 7px 12px;
+    box-shadow: var(--shadow); border: 1px solid rgba(200,184,154,0.5);
+    font-size: 0.76rem; max-width: 230px;
+    animation: chipIn 0.2s ease;
+  }
+  @keyframes chipIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .compare-dot {
+    width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0;
+  }
+  .compare-info { flex: 1; min-width: 0; }
+  .compare-name { color: var(--forest); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .compare-mode { color: var(--stone); font-size: 0.68rem; margin-top: 1px; }
+  .compare-remove {
+    background: none; border: none; cursor: pointer;
+    color: var(--stone); font-size: 0.85rem; padding: 2px 4px;
+    border-radius: 4px; line-height: 1; flex-shrink: 0;
+    transition: color 0.12s;
+  }
+  .compare-remove:hover { color: #c0392b; }
+
+  /* ══════════════════════════════════════════════════════
+     MOBILE STYLES  (≤ 768px)
+  ══════════════════════════════════════════════════════ */
+  @media (max-width: 768px) {
+
+    /* Header: stack into two rows */
+    #header {
+      height: auto;
+      flex-wrap: wrap;
+      padding: 10px 16px 10px;
+      gap: 6px;
+      align-items: center;
+    }
+    #header h1 { font-size: 1rem; }
+    .header-pill { font-size: 0.68rem; padding: 2px 8px; }
+
+    /* Search goes full-width on second row */
+    #search-wrap {
+      order: 3;
+      flex: none;
+      width: 100%;
+      max-width: 100%;
+      margin-left: 0;
+    }
+    #search-results { max-height: 200px; }
+
+    /* Map: starts below taller header (≈ 94px) + filter bar (≈ 46px) */
+    #map { top: 140px; }
+
+    /* Filter bar: full-width horizontal scroll strip */
+    #filters {
+      top: 94px;
+      left: 0; right: 0;
+      transform: none;
+      border-radius: 0;
+      padding: 8px 12px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      justify-content: flex-start;
+      border-left: none; border-right: none; border-top: none;
+      border-bottom: 1px solid rgba(200,184,154,0.4);
+      border-radius: 0;
+      gap: 6px;
+    }
+    #filters::-webkit-scrollbar { display: none; }
+    .filter-btn { font-size: 0.75rem; padding: 5px 11px; flex-shrink: 0; }
+
+    /* Panel: slide up from bottom as a sheet */
+    #panel {
+      top: auto;
+      bottom: 0; left: 0; right: 0;
+      width: 100%;
+      height: 72vh;
+      max-height: 72vh;
+      transform: translateY(100%);
+      border-left: none;
+      border-top: 1px solid var(--sand);
+      border-radius: 18px 18px 0 0;
+      box-shadow: 0 -8px 40px rgba(0,0,0,0.18);
+    }
+    #panel.open { transform: translateY(0); }
+
+    /* Drag handle visible on mobile */
+    #panel-drag-handle { display: block; }
+
+    /* Panel header padding tweak */
+    #panel-header { padding: 14px 20px 14px; }
+    #panel-name { font-size: 1.1rem; padding-right: 40px; }
+
+    /* Larger tap targets for markers */
+    .gym-marker { width: 18px; height: 18px; border-width: 3px; }
+
+    /* Hide legend on mobile — info is in the panel */
+    #bottom-left-stack { display: none; }
+
+    /* Count badge: smaller, tucked into corner */
+    #count-badge {
+      bottom: 16px; right: 55px;
+      padding: 7px 12px;
+      font-size: 0.72rem;
+      border-radius: 10px;
+    }
+    #count-badge span { font-size: 0.95rem; }
+
+    /* Mapbox nav controls: move up so they don't overlap bottom sheet */
+    .mapboxgl-ctrl-bottom-right {
+      bottom: 16px !important;
+      right: 12px !important;
+      /* hidden when panel open — handled by JS class */
+    }
+    .panel-open-mobile .mapboxgl-ctrl-bottom-right {
+      bottom: 76vh !important;
+    }
+
+    /* Make panel-close easier to tap */
+    #panel-close {
+      width: 36px; height: 36px; font-size: 1.1rem;
+      top: 12px; right: 12px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOADING OVERLAY -->
+<div id="loading-overlay">
+  <div id="loading-spinner"></div>
+  <div id="loading-msg">Loading gym data…</div>
+  <div id="loading-sub"></div>
+</div>
+
+<!-- HEADER -->
+<div id="header">
+  <h1>ECN <span>Gym Map</span></h1>
+  <div class="header-pill">UK &amp; Ireland</div>
+  <div id="search-wrap">
+    <span id="search-icon">⌕</span>
+    <input id="gym-search" type="text" placeholder="Search gyms…" autocomplete="off">
+    <div id="search-results"></div>
+  </div>
+</div>
+
+<!-- FILTER BAR -->
+<div id="filters">
+  <button class="filter-btn active" data-filter="all">All gyms</button>
+  <button class="filter-btn" data-filter="boulders">🪨 Bouldering</button>
+  <button class="filter-btn" data-filter="ropes">🧗 Ropes</button>
+  <button class="filter-btn" data-filter="cafe">☕ Café</button>
+  <button class="filter-btn" data-filter="moonboard">🌙 Moonboard / Kilter</button>
+  <button class="filter-btn" data-filter="kids">👶 Kids Zone</button>
+  <button class="filter-btn" data-filter="speed">⚡ Speed Wall</button>
+</div>
+
+<!-- MAP -->
+<div id="map"></div>
+
+<!-- SIDEBAR PANEL -->
+<div id="panel">
+  <div id="panel-drag-handle"></div>
+  <button id="panel-close">✕</button>
+  <div id="panel-header">
+    <div id="panel-name">Gym Name</div>
+    <div id="panel-address">Address</div>
+    <button id="compare-btn" onclick="toggleCompare()">📍 Add to comparison</button>
+  </div>
+  <div id="panel-body">
+    <div id="panel-price"></div>
+    <div id="panel-links"></div>
+    <div class="transport-section">
+      <h4>Public Transport Nearby</h4>
+      <div id="panel-transport" class="transport-pills"></div>
+      <div id="transport-stops-status"></div>
+    </div>
+    <div class="amenity-grid" id="amenity-grid"></div>
+    <div class="iso-section">
+      <h4>20-min Travel Zone</h4>
+      <div id="iso-buttons">
+        <button class="iso-btn" id="btn-walk" onclick="fetchTravel('walking')">
+          <span class="iso-icon">🚶</span> Walk
+        </button>
+        <button class="iso-btn" id="btn-cycle" onclick="fetchTravel('cycling')">
+          <span class="iso-icon">🚴</span> Cycle
+        </button>
+        <button class="iso-btn" id="btn-drive" onclick="fetchTravel('driving')">
+          <span class="iso-icon">🚗</span> Drive
+        </button>
+      </div>
+      <button id="iso-clear" onclick="clearGymTravel()">✕ Clear travel zone</button>
+      <div id="iso-status"></div>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM-LEFT: comparison tray stacked above legend -->
+<div id="bottom-left-stack">
+  <div id="comparison-tray"></div>
+  <button id="clear-selection-btn" onclick="clearSelection()">✕ Clear selection</button>
+  <div id="legend">
+    <h5>Travel Zones</h5>
+    <div class="legend-item"><div class="legend-dot" style="background:#d4581a;opacity:0.8"></div> Gym 1</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#1a8a7a;opacity:0.8"></div> Gym 2</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#7c3aed;opacity:0.8"></div> Gym 3</div>
+  </div>
+</div>
+
+<!-- COUNT -->
+<div id="count-badge"><span id="visible-count">314</span> gyms</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  SECURITY — referrer check
+//  Replace both values below with your Squarespace domain and
+//  the URL of your paywall/members page.
+//  Visitors who load the GitHub URL directly (not via your
+//  Squarespace embed) will be redirected to your paywall.
+// ═══════════════════════════════════════════════════════════════
+(function() {
+  var ALLOWED_REFERRER = 'yoursite.squarespace.com'; // ← change this
+  var PAYWALL_URL      = 'https://yoursite.squarespace.com/members'; // ← change this
+  var ref = document.referrer;
+  var isLocal = window.location.hostname === 'localhost' ||
+                window.location.hostname === '127.0.0.1';
+  if (!isLocal && (ref === '' || !ref.includes(ALLOWED_REFERRER))) {
+    window.location.replace(PAYWALL_URL);
+  }
+})();
+
+// ═══════════════════════════════════════════════════════════════
+//  CONFIG — update this URL when you change your Google Sheet
+// ═══════════════════════════════════════════════════════════════
+const SHEET_CSV_URL = 'YOUR_GOOGLE_SHEET_CSV_URL_HERE';
+// How to get this URL:
+//   1. In Google Sheets: File → Share → Publish to web
+//   2. Select your sheet tab, choose "Comma-separated values (.csv)"
+//   3. Click Publish, copy the URL, paste it above.
+// ═══════════════════════════════════════════════════════════════
+
+const MAPBOX_TOKEN = 'pk.eyJ1IjoiZXVyb2NsaW1iaW5nbmV3cyIsImEiOiJjbWxrdmI3bm4wMHk3M2dzOWM2dmwzNm5hIn0.zqw4vH5VDALlkPZC9xY8HA';
+mapboxgl.accessToken = MAPBOX_TOKEN;
+
+// ── MAP INIT ──────────────────────────────────────────────
+const map = new mapboxgl.Map({
+  container: 'map',
+  style: 'mapbox://styles/mapbox/outdoors-v12',
+  center: [-2.5, 54.5],
+  zoom: 5.5,
+  minZoom: 4
+});
+map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
+
+// ── STATE ─────────────────────────────────────────────────
+let GYMS = null;
+let markers = [];
+let selectedMarker = null;
+let selectedGym = null;
+let selectedGymIdx = null;
+let activeFilter = 'all';
+let transportMarkers = [];
+
+// Comparison: up to 3 pinned gyms, each with a colour slot
+// { gymIdx, gymName, color, lineColor, mode, sourceId, fillId, lineId }
+let pinnedGyms = [];
+
+// Preview travel zone (non-pinned) — shown without adding to comparison
+// { gymIdx, mode } – uses fixed layer IDs travel-src/fill/line-preview
+let previewTravel = null;
+const PREVIEW_TRAVEL = { sourceId: 'travel-src-preview', fillId: 'travel-fill-preview', lineId: 'travel-line-preview', fill: 'rgba(100,110,130,0.22)', line: '#5a6070' };
+const SLOT_COLORS = [
+  { fill: '#d4581a', line: '#a03a0a' }, // orange
+  { fill: '#1a8a7a', line: '#0d5c52' }, // teal
+  { fill: '#7c3aed', line: '#5b21b6' }, // purple
+];
+
+// ── CSV PARSER ────────────────────────────────────────────
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+
+  // Auto-detect delimiter: tab or comma
+  const firstLine = lines[0];
+  const delimiter = firstLine.includes('\t') ? '\t' : ',';
+
+  // Parse a single line respecting quoted fields (comma mode only)
+  function parseLine(line) {
+    if (delimiter === '\t') return line.split('\t').map(v => v.trim().replace(/^"|"$/g, ''));
+    const row = [];
+    let current = '', inQuotes = false;
+    for (let c = 0; c < line.length; c++) {
+      const ch = line[c];
+      if (ch === '"') { inQuotes = !inQuotes; }
+      else if (ch === ',' && !inQuotes) { row.push(current.trim()); current = ''; }
+      else { current += ch; }
+    }
+    row.push(current.trim());
+    return row;
+  }
+
+  const headers = parseLine(firstLine).map(h => h.replace(/^"|"$/g, '').trim());
+  console.log('CSV headers detected:', headers);
+
+  const features = [];
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const row = parseLine(lines[i]);
+
+    const get = (colName) => {
+      const idx = headers.findIndex(h => h.toLowerCase().trim() === colName.toLowerCase().trim());
+      return idx >= 0 ? (row[idx] || '').trim() : '';
+    };
+
+    const lat = parseFloat(get('Latitude'));
+    const lng = parseFloat(get('Longitude'));
+    if (isNaN(lat) || isNaN(lng)) continue;
+
+    features.push({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [lng, lat] },
+      properties: {
+        name:      get('Name'),
+        address:   get('Address'),
+        website:   get('Website'),
+        phone:     get('Phone'),
+        cafe:      get('Café') || get('Cafe'),
+        ropes:     get('Ropes'),
+        boulders:  get('Boulders'),
+        speed:     get('Speed'),
+        moonboard: get('Moon/Kilter/TB'),
+        training:  get('Training Space'),
+        kids:      get('Kids Zone'),
+        retail:    get('Retail'),
+        transport: get('Public Transport'),
+        parking:   get('Parking'),
+        price:     get('Peak Entry Price'),
+      }
+    });
+  }
+  return { type: 'FeatureCollection', features };
+}
+
+// ── LOADING SCREEN ────────────────────────────────────────
+function showLoading(msg) {
+  document.getElementById('loading-overlay').style.display = 'flex';
+  document.getElementById('loading-msg').textContent = msg;
+}
+function hideLoading() {
+  document.getElementById('loading-overlay').style.display = 'none';
+}
+function showError(msg) {
+  document.getElementById('loading-overlay').style.display = 'flex';
+  document.getElementById('loading-spinner').style.display = 'none';
+  document.getElementById('loading-msg').textContent = msg;
+  document.getElementById('loading-sub').textContent = 'Check the SHEET_CSV_URL in the HTML config, then reload.';
+}
+
+// ── FETCH DATA ────────────────────────────────────────────
+async function loadGyms() {
+  showLoading('Loading gym data…');
+  try {
+    const resp = await fetch(SHEET_CSV_URL);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const text = await resp.text();
+    GYMS = parseCSV(text);
+    if (GYMS.features.length === 0) throw new Error('No gyms parsed — check column headers');
+    document.getElementById('visible-count').textContent = GYMS.features.length;
+    hideLoading();
+    // If map already loaded, build markers now; else wait for map load event
+    if (map.loaded()) buildMarkers();
+  } catch (err) {
+    console.error('Failed to load gym data:', err);
+    showError(`⚠ Could not load gym data: ${err.message}`);
+  }
+}
+
+// ── RENDER MARKERS ────────────────────────────────────────
+function matchesFilter(props, filter) {
+  if (filter === 'all') return true;
+  if (filter === 'boulders') return props.boulders === 'Y';
+  if (filter === 'ropes') return props.ropes === 'Y' || props.ropes === 'AUTOBELAY';
+  if (filter === 'cafe') return props.cafe && props.cafe.toUpperCase() === 'Y';
+  if (filter === 'moonboard') return props.moonboard === 'Y';
+  if (filter === 'kids') return props.kids === 'Y';
+  if (filter === 'speed') return props.speed === 'Y';
+  return true;
+}
+
+function buildMarkers() {
+  if (!GYMS) return;
+  markers.forEach(m => m.marker.remove());
+  markers = [];
+  let count = 0;
+  GYMS.features.forEach((f, i) => {
+    const p = f.properties;
+    if (!matchesFilter(p, activeFilter)) return;
+    count++;
+    const el = document.createElement('div');
+    el.className = 'gym-marker';
+    el.dataset.idx = i;
+    const m = new mapboxgl.Marker({ element: el })
+      .setLngLat(f.geometry.coordinates)
+      .addTo(map);
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectGym(i, el);
+    });
+    markers.push({ marker: m, el, idx: i });
+  });
+  document.getElementById('visible-count').textContent = count;
+}
+
+// ── SELECT GYM ────────────────────────────────────────────
+function selectGym(idx, el) {
+  if (selectedMarker) selectedMarker.classList.remove('selected');
+  selectedMarker = el;
+  el.classList.add('selected');
+  selectedGym = GYMS.features[idx];
+  selectedGymIdx = idx;
+  clearTransportMarkers();
+  // Clear preview from previous gym if different gym
+  if (previewTravel && previewTravel.gymIdx !== idx) clearPreviewTravel();
+  showPanel(selectedGym.properties, idx);
+  map.flyTo({ center: selectedGym.geometry.coordinates, zoom: Math.max(map.getZoom(), 13), duration: 800 });
+  const [lng, lat] = selectedGym.geometry.coordinates;
+  fetchTransportStops(lat, lng);
+  document.getElementById('clear-selection-btn').classList.add('visible');
+}
+
+// ── PANEL ─────────────────────────────────────────────────
+function showPanel(p, idx) {
+  document.getElementById('panel-name').textContent = p.name;
+  document.getElementById('panel-address').textContent = p.address;
+
+  const priceEl = document.getElementById('panel-price');
+  priceEl.innerHTML = (p.price && p.price !== '')
+    ? `<div class="price-badge">Peak entry: £${parseFloat(p.price).toFixed(2)}</div>`
+    : `<div class="price-badge unknown">Price not listed</div>`;
+
+  const linksEl = document.getElementById('panel-links');
+  let linksHtml = '';
+  if (p.website) linksHtml += `<a href="${p.website}" class="panel-link" target="_blank" rel="noopener">🌐 Website</a>`;
+  if (p.phone)   linksHtml += `<a href="tel:${p.phone}" class="panel-link">📞 ${p.phone}</a>`;
+  linksEl.innerHTML = linksHtml;
+
+  const transEl = document.getElementById('panel-transport');
+  if (p.transport && p.transport !== 'NONE' && p.transport !== '') {
+    const modes = p.transport.split(',').map(t => t.trim()).filter(Boolean);
+    transEl.innerHTML = modes.map(m => `<span class="transport-pill">${transportLabel(m)}</span>`).join('');
+  } else {
+    transEl.innerHTML = `<span class="transport-pill">No public transport listed</span>`;
+  }
+  document.getElementById('transport-stops-status').textContent = '';
+
+  const amenities = [
+    { key: 'boulders',  label: '🪨 Bouldering' },
+    { key: 'ropes',     label: '🧗 Ropes / Autobelay' },
+    { key: 'cafe',      label: '☕ Café' },
+    { key: 'moonboard', label: '🌙 Moon/Kilter/TB' },
+    { key: 'training',  label: '💪 Training Space' },
+    { key: 'kids',      label: '👶 Kids Zone' },
+    { key: 'speed',     label: '⚡ Speed Wall' },
+    { key: 'retail',    label: '🛍️ Retail' },
+    { key: 'parking',   label: '🅿️ Parking' },
+  ];
+  document.getElementById('amenity-grid').innerHTML = amenities.map(a => {
+    const isYes = p[a.key] === 'Y' || p[a.key] === 'AUTOBELAY';
+    return `<div class="tag ${isYes ? 'yes' : 'no'}">${isYes ? '✓' : '✗'} ${a.label}</div>`;
+  }).join('');
+
+  // Update travel zone buttons to reflect pinned colour
+  updateTravelButtons(idx);
+
+  // Update compare button
+  updateCompareBtn(idx);
+
+  document.getElementById('panel').classList.add('open');
+  document.body.classList.add('panel-open-mobile');
+  document.getElementById('iso-status').textContent = '';
+}
+
+function transportLabel(mode) {
+  const icons = { BUS:'🚌 Bus', TRAIN:'🚂 Train', TRAM:'🚃 Tram',
+    UNDERGROUND:'🚇 Underground', METRO:'🚇 Metro', FERRY:'⛴️ Ferry', TRAM_TRAIN:'🚈 Tram-Train' };
+  return icons[mode.toUpperCase()] || mode;
+}
+
+function updateCompareBtn(idx) {
+  const btn = document.getElementById('compare-btn');
+  const pinned = pinnedGyms.find(g => g.gymIdx === idx);
+  if (pinned) {
+    btn.textContent = '✓ In comparison';
+    btn.className = 'pinned';
+  } else if (pinnedGyms.length >= 3) {
+    btn.textContent = '📍 Comparison full (3/3)';
+    btn.className = 'full';
+  } else {
+    btn.textContent = '📍 Add to comparison';
+    btn.className = '';
+  }
+}
+
+function updateTravelButtons(idx) {
+  const pinned = pinnedGyms.find(g => g.gymIdx === idx);
+  const preview = previewTravel && previewTravel.gymIdx === idx ? previewTravel : null;
+  const color = pinned ? pinned.color.fill : null;
+  const mode  = pinned ? pinned.mode : (preview ? preview.mode : null);
+  ['btn-walk','btn-cycle','btn-drive'].forEach(id => {
+    const btn = document.getElementById(id);
+    btn.className = 'iso-btn';
+    if (color) btn.style.setProperty('--slot-color', color);
+    else btn.style.removeProperty('--slot-color');
+  });
+  if (mode) {
+    const btnMap = { walking:'btn-walk', cycling:'btn-cycle', driving:'btn-drive' };
+    const activeBtn = document.getElementById(btnMap[mode]);
+    if (activeBtn) {
+      activeBtn.className = 'iso-btn active-slot';
+      if (color) activeBtn.style.setProperty('--slot-color', color);
+    }
+  }
+  const hasTravelZone = (!!pinned && !!pinned.mode) || !!preview;
+  document.getElementById('iso-clear').classList.toggle('visible', hasTravelZone);
+}
+
+function clearSelection() {
+  document.getElementById('panel').classList.remove('open');
+  document.body.classList.remove('panel-open-mobile');
+  if (selectedMarker) selectedMarker.classList.remove('selected');
+  selectedMarker = null;
+  selectedGym = null;
+  selectedGymIdx = null;
+  clearTransportMarkers();
+  clearPreviewTravel();
+  document.getElementById('iso-clear').classList.remove('visible');
+  document.getElementById('iso-status').textContent = '';
+  document.getElementById('clear-selection-btn').classList.remove('visible');
+}
+
+document.getElementById('panel-close').addEventListener('click', clearSelection);
+
+// ── COMPARISON ────────────────────────────────────────────
+function toggleCompare() {
+  if (selectedGymIdx === null) return;
+  const existing = pinnedGyms.findIndex(g => g.gymIdx === selectedGymIdx);
+  if (existing >= 0) {
+    removePinnedGym(existing);
+  } else {
+    if (pinnedGyms.length >= 3) return;
+    const slotIdx = getNextSlot();
+    const hadPreview = previewTravel && previewTravel.gymIdx === selectedGymIdx;
+    const savedMode = hadPreview ? previewTravel.mode : null;
+
+    // Clear preview layers before creating pinned layers with same gym
+    if (hadPreview) clearPreviewTravel();
+
+    pinnedGyms.push({
+      gymIdx:   selectedGymIdx,
+      gymName:  selectedGym.properties.name,
+      color:    SLOT_COLORS[slotIdx],
+      slotIdx,
+      mode:     null,
+      sourceId: `travel-src-${slotIdx}`,
+      fillId:   `travel-fill-${slotIdx}`,
+      lineId:   `travel-line-${slotIdx}`,
+    });
+    updateCompareBtn(selectedGymIdx);
+    updateTravelButtons(selectedGymIdx);
+    renderComparisonTray();
+
+    // Re-fetch travel zone in pinned colour if one was showing
+    if (savedMode) fetchTravel(savedMode);
+  }
+}
+
+function getNextSlot() {
+  const usedSlots = pinnedGyms.map(g => g.slotIdx);
+  for (let i = 0; i < 3; i++) if (!usedSlots.includes(i)) return i;
+  return 0;
+}
+
+function removePinnedGym(pinnedIdx) {
+  const g = pinnedGyms[pinnedIdx];
+  // Remove map layers
+  if (map.getLayer(g.fillId)) map.removeLayer(g.fillId);
+  if (map.getLayer(g.lineId)) map.removeLayer(g.lineId);
+  if (map.getSource(g.sourceId)) map.removeSource(g.sourceId);
+  pinnedGyms.splice(pinnedIdx, 1);
+  // Update marker colour back to default
+  const markerObj = markers.find(m => m.idx === g.gymIdx);
+  if (markerObj) markerObj.el.style.removeProperty('background');
+  if (selectedGymIdx === g.gymIdx) {
+    updateCompareBtn(g.gymIdx);
+    updateTravelButtons(g.gymIdx);
+    document.getElementById('iso-clear').classList.remove('visible');
+    document.getElementById('iso-status').textContent = '';
+  }
+  renderComparisonTray();
+}
+
+function renderComparisonTray() {
+  const tray = document.getElementById('comparison-tray');
+  tray.innerHTML = '';
+  pinnedGyms.forEach((g, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'compare-chip';
+    const modeLabel = g.mode ? { walking:'Walking', cycling:'Cycling', driving:'Driving' }[g.mode] : 'No zone yet';
+    chip.innerHTML = `
+      <div class="compare-dot" style="background:${g.color.fill}"></div>
+      <div class="compare-info">
+        <div class="compare-name">${g.gymName}</div>
+        <div class="compare-mode">${modeLabel}</div>
+      </div>
+      <button class="compare-remove" onclick="removePinnedGym(${i})" title="Remove">✕</button>
+    `;
+    tray.appendChild(chip);
+  });
+}
+
+// ── TRAVEL ZONES ──────────────────────────────────────────
+async function fetchTravel(mode) {
+  if (!selectedGym || selectedGymIdx === null) return;
+
+  const pinned = pinnedGyms.find(g => g.gymIdx === selectedGymIdx);
+
+  if (pinned) {
+    // Gym is in comparison — use its pinned slot
+    // Toggle: clicking same mode clears it
+    if (pinned.mode === mode) {
+      clearGymTravel();
+      return;
+    }
+    pinned.mode = mode;
+    updateTravelButtons(selectedGymIdx);
+    renderComparisonTray();
+    await drawTravelZone(pinned.sourceId, pinned.fillId, pinned.lineId, pinned.color.fill, pinned.color.line, mode);
+  } else {
+    // Gym NOT in comparison — use preview layer (no comparison add)
+    // Clear any previous preview first
+    clearPreviewTravel();
+
+    // Toggle: clicking same mode on same gym in preview clears it
+    if (previewTravel && previewTravel.gymIdx === selectedGymIdx && previewTravel.mode === mode) {
+      previewTravel = null;
+      updateTravelButtons(selectedGymIdx);
+      return;
+    }
+
+    previewTravel = { gymIdx: selectedGymIdx, mode };
+    updateTravelButtons(selectedGymIdx);
+    await drawTravelZone(PREVIEW_TRAVEL.sourceId, PREVIEW_TRAVEL.fillId, PREVIEW_TRAVEL.lineId, PREVIEW_TRAVEL.fill, PREVIEW_TRAVEL.line, mode);
+  }
+}
+
+async function drawTravelZone(sourceId, fillId, lineId, fillColor, lineColor, mode) {
+  const [lng, lat] = selectedGym.geometry.coordinates;
+  document.getElementById('iso-status').innerHTML = `<span class="spinner"></span> Fetching ${mode} zone…`;
+
+  const url = `https://api.mapbox.com/isochrone/v1/mapbox/${mode}/${lng},${lat}?contours_minutes=20&polygons=true&access_token=${MAPBOX_TOKEN}`;
+  try {
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (!data.features || data.features.length === 0) throw new Error('No data');
+
+    if (map.getSource(sourceId)) {
+      map.getSource(sourceId).setData(data);
+      map.setPaintProperty(fillId, 'fill-color', fillColor);
+      map.setPaintProperty(lineId, 'line-color', lineColor);
+    } else {
+      map.addSource(sourceId, { type: 'geojson', data });
+      map.addLayer({ id: fillId, type: 'fill', source: sourceId,
+        paint: { 'fill-color': fillColor, 'fill-opacity': 0.22 }
+      });
+      map.addLayer({ id: lineId, type: 'line', source: sourceId,
+        paint: { 'line-color': lineColor, 'line-width': 2, 'line-opacity': 0.85 }
+      });
+    }
+
+    document.getElementById('iso-status').textContent = `20-min ${mode} zone`;
+    document.getElementById('iso-clear').classList.add('visible');
+    updateTravelButtons(selectedGymIdx);
+
+    const coords = data.features[0].geometry.coordinates[0];
+    const bounds = coords.reduce((b, c) => b.extend(c), new mapboxgl.LngLatBounds(coords[0], coords[0]));
+    map.fitBounds(bounds, { padding: 60, maxZoom: 14, duration: 800 });
+
+  } catch (err) {
+    document.getElementById('iso-status').textContent = '⚠ Could not load travel zone.';
+    console.error(err);
+  }
+}
+
+function clearPreviewTravel() {
+  if (map.getLayer(PREVIEW_TRAVEL.fillId)) map.removeLayer(PREVIEW_TRAVEL.fillId);
+  if (map.getLayer(PREVIEW_TRAVEL.lineId)) map.removeLayer(PREVIEW_TRAVEL.lineId);
+  if (map.getSource(PREVIEW_TRAVEL.sourceId)) map.removeSource(PREVIEW_TRAVEL.sourceId);
+  previewTravel = null;
+}
+
+function clearGymTravel() {
+  if (selectedGymIdx === null) return;
+  const pinned = pinnedGyms.find(g => g.gymIdx === selectedGymIdx);
+  if (pinned) {
+    if (map.getLayer(pinned.fillId)) map.removeLayer(pinned.fillId);
+    if (map.getLayer(pinned.lineId)) map.removeLayer(pinned.lineId);
+    if (map.getSource(pinned.sourceId)) map.removeSource(pinned.sourceId);
+    pinned.mode = null;
+    renderComparisonTray();
+  } else {
+    clearPreviewTravel();
+  }
+  document.getElementById('iso-clear').classList.remove('visible');
+  document.getElementById('iso-status').textContent = '';
+  updateTravelButtons(selectedGymIdx);
+}
+
+// ── TRANSPORT STOPS ───────────────────────────────────────
+function getTransportIcon(tags) {
+  if (tags.station === 'subway' || tags.subway === 'yes' || tags.network === 'London Underground') return '🚇';
+  if (tags.railway === 'tram_stop') return '🚃';
+  if (tags.light_rail === 'yes' || tags.station === 'light_rail') return '🚈';
+  if (tags.railway === 'station' || tags.railway === 'halt') return '🚂';
+  return '🚌';
+}
+
+async function fetchTransportStops(lat, lng) {
+  const statusEl = document.getElementById('transport-stops-status');
+  statusEl.textContent = 'Loading nearby stops…';
+  const query = `[out:json][timeout:15];
+(
+  node["highway"="bus_stop"](around:600,${lat},${lng});
+  node["railway"="station"](around:600,${lat},${lng});
+  node["railway"="halt"](around:600,${lat},${lng});
+  node["railway"="tram_stop"](around:600,${lat},${lng});
+  node["station"="subway"](around:600,${lat},${lng});
+);
+out body;`;
+  try {
+    const resp = await fetch('https://overpass-api.de/api/interpreter', {
+      method: 'POST',
+      body: 'data=' + encodeURIComponent(query)
+    });
+    const data = await resp.json();
+    if (!data.elements || data.elements.length === 0) {
+      statusEl.textContent = 'No stops found within 600m.';
+      return;
+    }
+    // Deduplicate: skip unnamed stops of same type if a named one already placed very nearby
+    const seen = new Set();
+    data.elements.forEach(el => {
+      const icon = getTransportIcon(el.tags);
+      const name = el.tags.name || '';
+      const key = `${icon}-${name}`;
+      if (seen.has(key) && name) return;
+      seen.add(key);
+      const div = document.createElement('div');
+      div.className = 'transport-marker';
+      div.textContent = icon;
+      div.title = name || icon;
+      const m = new mapboxgl.Marker({ element: div, anchor: 'center' })
+        .setLngLat([el.lon, el.lat])
+        .addTo(map);
+      transportMarkers.push(m);
+    });
+    const c = transportMarkers.length;
+    statusEl.textContent = c > 0 ? `${c} stop${c !== 1 ? 's' : ''} within 600m` : 'No stops found within 600m.';
+  } catch (err) {
+    statusEl.textContent = 'Could not load nearby stops.';
+    console.warn('Transport stops error:', err);
+  }
+}
+
+function clearTransportMarkers() {
+  transportMarkers.forEach(m => m.remove());
+  transportMarkers = [];
+}
+
+// ── FILTERS ───────────────────────────────────────────────
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter = btn.dataset.filter;
+    buildMarkers();
+    if (activeFilter !== 'all') {
+      document.getElementById('panel').classList.remove('open');
+      document.body.classList.remove('panel-open-mobile');
+      clearTransportMarkers();
+    }
+  });
+});
+
+// ── SEARCH ────────────────────────────────────────────────
+const searchInput = document.getElementById('gym-search');
+const searchResults = document.getElementById('search-results');
+
+searchInput.addEventListener('input', () => {
+  if (!GYMS) return;
+  const q = searchInput.value.trim().toLowerCase();
+  if (q.length < 2) { searchResults.classList.remove('open'); return; }
+  const matches = GYMS.features.filter(f =>
+    f.properties.name.toLowerCase().includes(q) ||
+    f.properties.address.toLowerCase().includes(q)
+  ).slice(0, 8);
+  if (matches.length === 0) { searchResults.classList.remove('open'); return; }
+  searchResults.innerHTML = matches.map(f => {
+    const idx = GYMS.features.indexOf(f);
+    return `<div class="search-item" data-idx="${idx}">
+      <strong>${f.properties.name}</strong>
+      <small>${f.properties.address.split(',').slice(-3).join(',').trim()}</small>
+    </div>`;
+  }).join('');
+  searchResults.classList.add('open');
+});
+
+searchResults.addEventListener('click', e => {
+  const item = e.target.closest('.search-item');
+  if (!item) return;
+  const idx = parseInt(item.dataset.idx);
+  searchInput.value = GYMS.features[idx].properties.name;
+  searchResults.classList.remove('open');
+  const markerObj = markers.find(m => m.idx === idx);
+  if (markerObj) {
+    selectGym(idx, markerObj.el);
+  } else {
+    const coords = GYMS.features[idx].geometry.coordinates;
+    map.flyTo({ center: coords, zoom: 14 });
+    selectGym(idx, document.createElement('div'));
+  }
+});
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('#search-wrap')) searchResults.classList.remove('open');
+});
+
+// ── STARTUP ───────────────────────────────────────────────
+map.on('load', () => {
+  if (GYMS) buildMarkers();
+});
+
+loadGyms();
+
+</script>
+</body>
+</html>
