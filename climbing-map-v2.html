@@ -565,28 +565,11 @@
 <div id="count-badge"><span id="visible-count">314</span> gyms</div>
 
 <script>
-// ═══════════════════════════════════════════════════════════════
-//  SECURITY — referrer check
-//  Replace both values below with your Squarespace domain and
-//  the URL of your paywall/members page.
-//  Visitors who load the GitHub URL directly (not via your
-//  Squarespace embed) will be redirected to your paywall.
-// ═══════════════════════════════════════════════════════════════
-(function() {
-  var ALLOWED_REFERRER = 'yoursite.squarespace.com'; // ← change this
-  var PAYWALL_URL      = 'https://yoursite.squarespace.com/members'; // ← change this
-  var ref = document.referrer;
-  var isLocal = window.location.hostname === 'localhost' ||
-                window.location.hostname === '127.0.0.1';
-  if (!isLocal && (ref === '' || !ref.includes(ALLOWED_REFERRER))) {
-    window.location.replace(PAYWALL_URL);
-  }
-})();
 
 // ═══════════════════════════════════════════════════════════════
 //  CONFIG — update this URL when you change your Google Sheet
 // ═══════════════════════════════════════════════════════════════
-const SHEET_CSV_URL = 'YOUR_GOOGLE_SHEET_CSV_URL_HERE';
+const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSwsrCp7nnygovZ1ZpsYbKjMZDyxBd3FLTPW2_nDWkLDqGfzVrqNoVjmErn1VkjrryYFvrjjNjHEejt/pub?gid=852920628&single=true&output=csv';
 // How to get this URL:
 //   1. In Google Sheets: File → Share → Publish to web
 //   2. Select your sheet tab, choose "Comma-separated values (.csv)"
