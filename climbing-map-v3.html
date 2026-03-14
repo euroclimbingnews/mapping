@@ -871,7 +871,7 @@
       <div class="guide-section">
         <h3>🔎 Search & Filter</h3>
         <p>Use the search bar in the header to find a gym by name or location. Results appear as you type — click any result to fly to that gym and open its profile.</p>
-        <p>The filter bar below the header lets you narrow the map to gyms with specific features: bouldering, ropes, café, Moonboard/Kilter Board, kids zone, or speed wall. Select a filter to show only matching gyms.</p>
+        <p>The filter bar below the header lets you narrow the map to gyms with specific features: bouldering, ropes, café, Moonboard/Kilter/Tension Board, kids zone, or speed wall. Select a filter to show only matching gyms.</p>
       </div>
 
       <div class="guide-section">
@@ -1134,23 +1134,6 @@
 <div id="count-badge"><span id="visible-count">314</span> gyms</div>
 
 <script>
-// ═══════════════════════════════════════════════════════════════
-//  SECURITY — referrer check
-//  Replace both values below with your Squarespace domain and
-//  the URL of your paywall/members page.
-//  Visitors who load the GitHub URL directly (not via your
-//  Squarespace embed) will be redirected to your paywall.
-// ═══════════════════════════════════════════════════════════════
-(function() {
-  var ALLOWED_REFERRER = 'yoursite.squarespace.com'; // ← change this
-  var PAYWALL_URL      = 'https://yoursite.squarespace.com/members'; // ← change this
-  var ref = document.referrer;
-  var isLocal = window.location.hostname === 'localhost' ||
-                window.location.hostname === '127.0.0.1';
-  if (!isLocal && (ref === '' || !ref.includes(ALLOWED_REFERRER))) {
-    window.location.replace(PAYWALL_URL);
-  }
-})();
 
 // ═══════════════════════════════════════════════════════════════
 //  CONFIG — update this URL when you change your Google Sheet
