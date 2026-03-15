@@ -292,6 +292,8 @@
   #age-legend-note p { font-size: 0.67rem; color: var(--stone); line-height: 1.6; margin: 0; }
   #density-legend { display: none; }
   #density-legend.visible { display: block; }
+  #iso-legend { display: none; }
+  #iso-legend.visible { display: block; }
   #imd-legend-note { margin-top: 8px; border-top: 1px solid rgba(0,0,0,0.08); padding-top: 6px; }
   #imd-legend-note p { font-size: 0.67rem; color: var(--stone); line-height: 1.6; margin: 0; }
   .imd-legend-disclaimer { font-style: italic; margin-top: 4px !important; color: #aaa !important; font-size: 0.63rem !important; }
@@ -683,6 +685,15 @@
   }
   #loc-panel-close:hover { background: rgba(255,255,255,0.3); }
   #loc-panel-body { padding: 14px 18px 16px; }
+  #loc-slider-wrap { margin-bottom: 12px; }
+  #loc-time-slider {
+    width: 100%; accent-color: #1a3a5c;
+    height: 4px; cursor: pointer; margin-bottom: 3px;
+  }
+  #loc-slider-ticks {
+    display: flex; justify-content: space-between;
+    font-size: 0.62rem; color: var(--stone); padding: 0 2px;
+  }
   .loc-zone-row {
     display: grid; grid-template-columns: 80px 1fr 80px 1fr;
     align-items: center; padding: 8px 0;
@@ -1060,7 +1071,7 @@
             <span>Raw population per km². Near-white = sparse rural, deep navy = dense urban core. Required for catchment population figures.</span>
           </div>
         </div>
-        <div class="guide-tip">💡 Data sources: ONS Census 2021 (England & Wales), NRS SAPE mid-2024 (Scotland), NISRA Census 2021 (Northern Ireland), CSO Census 2022 (Ireland).</div>
+        <div class="guide-tip">💡 Data sources: ONS Census 2021 (England & Wales), NRS SAPE mid-2024 (Scotland), NISRA Census 2021 (Northern Ireland), CSO Census 2022 (Ireland), Eurostat GEOSTAT 2021 (continental Europe).</div>
       </div>
 
       <div class="guide-section">
@@ -1102,6 +1113,12 @@
     <button id="loc-panel-close" onclick="clearLocationZones()">✕</button>
   </div>
   <div id="loc-panel-body">
+    <div id="loc-slider-wrap">
+      <input type="range" id="loc-time-slider" min="10" max="60" step="10" value="20">
+      <div id="loc-slider-ticks">
+        <span>10</span><span>20</span><span>30</span><span>40</span><span>50</span><span>60</span>
+      </div>
+    </div>
     <div id="loc-zones">
       <div class="loc-zone-row" id="loc-row-walking">
         <span class="loc-zone-label">🚶 Walk</span>
@@ -1289,6 +1306,12 @@
   <div id="comparison-tray"></div>
   <button id="clear-selection-btn" onclick="clearSelection()">✕ Clear selection</button>
   <div id="legend">
+    <div id="iso-legend">
+      <h5>Travel Zones</h5>
+      <div class="bleg-row"><div class="bleg-swatch" style="background:#2a8a4a"></div> 🚶 Walk</div>
+      <div class="bleg-row"><div class="bleg-swatch" style="background:#1a6aaa"></div> 🚴 Cycle</div>
+      <div class="bleg-row"><div class="bleg-swatch" style="background:#c05a10"></div> 🚗 Drive</div>
+    </div>
     <div id="building-legend">
       <h5>Building Types</h5>
       <div class="bleg-row"><div class="bleg-swatch" style="background:#f59e0b"></div> Residential</div>
@@ -1340,6 +1363,7 @@
         <p style="font-size:0.67rem;color:var(--stone);line-height:1.6;margin:0">🏴󠁧󠁢󠁳󠁣󠁴󠁿 NRS SAPE mid-2024</p>
         <p style="font-size:0.67rem;color:var(--stone);line-height:1.6;margin:0">🇬🇧 NISRA Census 2021</p>
         <p style="font-size:0.67rem;color:var(--stone);line-height:1.6;margin:0">🇮🇪 CSO Census 2022</p>
+        <p style="font-size:0.67rem;color:var(--stone);line-height:1.6;margin:0">🌍 Eurostat GEOSTAT 2021</p>
       </div>
     </div>
   </div>
@@ -2003,6 +2027,7 @@ map.on('load', () => {
   addImdLayer();
   addAgeLayer();
   addDensityLayer();
+  addEuropeDensityLayer();
 });
 
 // ── LAYERS PANEL ───────────────────────────────────────────────
@@ -2180,6 +2205,27 @@ function handleGuideOverlayClick(e) {
   if (e.target === document.getElementById('guide-overlay')) toggleGuide();
 }
 
+// ── LOCATION ANALYSIS SLIDER ─────────────────────────────────────
+function locMinutes() {
+  const slider = document.getElementById('loc-time-slider');
+  return slider ? parseInt(slider.value) : 20;
+}
+
+let locSliderTimer = null;
+let _lastLocLng = null, _lastLocLat = null;
+
+document.getElementById('loc-time-slider').addEventListener('input', function() {
+  document.getElementById('loc-panel-sub').textContent =
+    `${this.value}-min catchment zones`;
+  // Redraw if zones are active
+  if (_lastLocLng !== null) {
+    clearTimeout(locSliderTimer);
+    locSliderTimer = setTimeout(() => {
+      drawLocationZones(_lastLocLng, _lastLocLat);
+    }, 400);
+  }
+});
+
 // ── TRAVEL TIME SLIDER ───────────────────────────────────────────
 function isoMinutes() {
   const slider = document.getElementById('iso-time-slider');
@@ -2259,7 +2305,7 @@ function setMapLayer(layer) {
     if (map.getLayer(id))
       map.setLayoutProperty(id, 'visibility', layer === 'age' ? 'visible' : 'none');
   });
-  const densityIds = ['ecn-density-fill'];
+  const densityIds = ['ecn-density-fill', 'ecn-eu-density-fill-1', 'ecn-eu-density-fill-2'];
   densityIds.forEach(id => {
     if (map.getLayer(id))
       map.setLayoutProperty(id, 'visibility', layer === 'density' ? 'visible' : 'none');
@@ -2423,13 +2469,93 @@ function addAgeLayer() {
 const DENSITY_TILESET_ID   = 'euroclimbingnews.2n10lll3';
 const DENSITY_SOURCE_LAYER = 'uk_ireland_density-9g6owi';
 
+const EU_DENSITY_TILESET_1   = 'euroclimbingnews.98zfnqt2';
+const EU_DENSITY_SOURCE_1    = 'europe_density_v4_part1-9wbde7';
+const EU_DENSITY_TILESET_2   = 'euroclimbingnews.53vnt95s';
+const EU_DENSITY_SOURCE_2    = 'europe_density_v4_part2-d5z46z';
+
 function addDensityLayer() {
+  // ── EU-wide density part 1 (polygon fills) ─────────────────────
+  map.addSource('ecn-eu-density-src-1', {
+    type: 'vector',
+    url: `mapbox://${EU_DENSITY_TILESET_1}`
+  });
+  map.addLayer({
+    id: 'ecn-eu-density-loader-1',
+    type: 'fill',
+    source: 'ecn-eu-density-src-1',
+    'source-layer': EU_DENSITY_SOURCE_1,
+    layout: { visibility: 'visible' },
+    paint: { 'fill-opacity': 0 }
+  }, 'waterway-label');
+  map.addLayer({
+    id: 'ecn-eu-density-fill-1',
+    type: 'fill',
+    source: 'ecn-eu-density-src-1',
+    'source-layer': EU_DENSITY_SOURCE_1,
+    layout: { visibility: 'none' },
+    paint: {
+      'fill-color': [
+        'interpolate', ['linear'], ['get', 'density'],
+        0,    '#f0f7ff',
+        50,   '#bfdbfe',
+        500,  '#60a5fa',
+        2000, '#2563ab',
+        5000, '#1e3a6e',
+        10000,'#0c1a40'
+      ],
+      'fill-opacity': [
+        'interpolate', ['linear'], ['zoom'],
+        4, 0.65,
+        10, 0.55
+      ],
+      'fill-outline-color': 'rgba(0,0,0,0.04)'
+    }
+  }, 'waterway-label');
+
+  // ── EU-wide density part 2 ──────────────────────────────────────
+  map.addSource('ecn-eu-density-src-2', {
+    type: 'vector',
+    url: `mapbox://${EU_DENSITY_TILESET_2}`
+  });
+  map.addLayer({
+    id: 'ecn-eu-density-loader-2',
+    type: 'fill',
+    source: 'ecn-eu-density-src-2',
+    'source-layer': EU_DENSITY_SOURCE_2,
+    layout: { visibility: 'visible' },
+    paint: { 'fill-opacity': 0 }
+  }, 'waterway-label');
+  map.addLayer({
+    id: 'ecn-eu-density-fill-2',
+    type: 'fill',
+    source: 'ecn-eu-density-src-2',
+    'source-layer': EU_DENSITY_SOURCE_2,
+    layout: { visibility: 'none' },
+    paint: {
+      'fill-color': [
+        'interpolate', ['linear'], ['get', 'density'],
+        0,    '#f0f7ff',
+        50,   '#bfdbfe',
+        500,  '#60a5fa',
+        2000, '#2563ab',
+        5000, '#1e3a6e',
+        10000,'#0c1a40'
+      ],
+      'fill-opacity': [
+        'interpolate', ['linear'], ['zoom'],
+        4, 0.65,
+        10, 0.55
+      ],
+      'fill-outline-color': 'rgba(0,0,0,0.04)'
+    }
+  }, 'waterway-label');
+
+  // ── UK/Ireland density (small-area, high-res, renders on top) ──
   map.addSource('ecn-density-src', {
     type: 'vector',
     url: `mapbox://${DENSITY_TILESET_ID}`
   });
-
-  // Permanent transparent layer — keeps density tiles loaded for catchment calc
   map.addLayer({
     id: 'ecn-density-loader',
     type: 'fill',
@@ -2438,8 +2564,6 @@ function addDensityLayer() {
     layout: { visibility: 'visible' },
     paint: { 'fill-opacity': 0 }
   }, 'waterway-label');
-
-  // Choropleth: density (people/km²), pale blue → deep navy
   map.addLayer({
     id: 'ecn-density-fill',
     type: 'fill',
@@ -2448,14 +2572,13 @@ function addDensityLayer() {
     layout: { visibility: 'none' },
     paint: {
       'fill-color': [
-        'interpolate', ['linear'],
-        ['get', 'density'],
-        0,    '#f0f7ff',  // near-white
-        50,   '#bfdbfe',  // light blue
-        500,  '#60a5fa',  // mid blue
-        2000, '#2563ab',  // deep blue
-        5000, '#1e3a6e',  // dark navy
-        10000,'#0c1a40'   // near-black navy
+        'interpolate', ['linear'], ['get', 'density'],
+        0,    '#f0f7ff',
+        50,   '#bfdbfe',
+        500,  '#60a5fa',
+        2000, '#2563ab',
+        5000, '#1e3a6e',
+        10000,'#0c1a40'
       ],
       'fill-opacity': [
         'interpolate', ['linear'], ['zoom'],
@@ -2494,19 +2617,25 @@ async function calcCatchmentPop(isoPolygon) {
   await new Promise(r => setTimeout(r, 800));
 
   let totalPop = 0, weightedAge = 0, ageWeightSum = 0;
-  let densityFeatures = [], ageFeatures = [];
+  let densityFeatures = [], ageFeatures = [], euDensityFeatures = [];
 
   try {
     densityFeatures = map.querySourceFeatures('ecn-density-src', {
       sourceLayer: DENSITY_SOURCE_LAYER
     });
-  } catch(e) { console.warn('Density query failed:', e); }
+  } catch(e) { console.warn('UK/Ireland density query failed:', e); }
 
   try {
     ageFeatures = map.querySourceFeatures('ecn-age-src', {
       sourceLayer: AGE_SOURCE_LAYER
     });
   } catch(e) { console.warn('Age query failed:', e); }
+
+  try {
+    const part1 = map.querySourceFeatures('ecn-eu-density-src-1', { sourceLayer: EU_DENSITY_SOURCE_1 });
+    const part2 = map.querySourceFeatures('ecn-eu-density-src-2', { sourceLayer: EU_DENSITY_SOURCE_2 });
+    euDensityFeatures = [...part1, ...part2];
+  } catch(e) { console.warn('EU density query failed:', e); }
 
   // Build age lookup by area_code for fast access
   const ageLookup = {};
@@ -2515,7 +2644,7 @@ async function calcCatchmentPop(isoPolygon) {
     if (code) ageLookup[code] = f.properties.age_pct;
   });
 
-  // For each density area, check if centroid is inside isochrone
+  // UK/Ireland: polygon features with area_code + total_pop
   const seen = new Set();
   densityFeatures.forEach(f => {
     const code = f.properties.area_code;
@@ -2530,6 +2659,28 @@ async function calcCatchmentPop(isoPolygon) {
         if (agePct != null && !isNaN(agePct)) {
           weightedAge += agePct * pop;
           ageWeightSum += pop;
+        }
+      }
+    } catch(e) {}
+  });
+
+  // EU: polygon features with density (people/km²) — each cell is 1km²
+  // Use turf.centroid to get a representative point for the polygon
+  const euSeen = new Set();
+  euDensityFeatures.forEach(f => {
+    if (!f.geometry) return;
+    try {
+      const centroid = turf.centroid(f);
+      const [lng, lat] = centroid.geometry.coordinates;
+      const key = `${lng.toFixed(3)},${lat.toFixed(3)}`;
+      if (euSeen.has(key)) return;
+      euSeen.add(key);
+      if (turf.booleanPointInPolygon(centroid, isoPolygon)) {
+        const pop = Number(f.properties.density) || 0;
+        // Skip cells already covered by the higher-res UK/Ireland layer
+        const inUKIreland = (lng >= -11 && lng <= 2.5 && lat >= 49 && lat <= 61);
+        if (!inUKIreland) {
+          totalPop += pop;
         }
       }
     } catch(e) {}
@@ -2590,6 +2741,12 @@ const LOC_ZONE_CONFIG = {
 async function drawLocationZones(lng, lat) {
   clearLocationZones(false);
 
+  // Store for slider redraw
+  _lastLocLng = lng;
+  _lastLocLat = lat;
+
+  const mins = locMinutes();
+
   // Place pin marker
   const el = document.createElement('div');
   el.id = 'loc-cursor';
@@ -2598,7 +2755,10 @@ async function drawLocationZones(lng, lat) {
 
   // Open panel
   document.getElementById('loc-panel').classList.add('open');
-  document.getElementById('loc-panel-sub').textContent = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+  document.getElementById('loc-panel-sub').textContent = `${mins}-min catchment zones`;
+
+  // Show isochrone legend
+  document.getElementById('iso-legend').classList.add('visible');
 
   // Reset stats
   ['walking','cycling','driving'].forEach(mode => {
@@ -2612,7 +2772,7 @@ async function drawLocationZones(lng, lat) {
   // Fetch all 3 isochrones in parallel
   const modes = ['walking', 'cycling', 'driving'];
   const isoPromises = modes.map(mode =>
-    fetch(`https://api.mapbox.com/isochrone/v1/mapbox/${mode}/${lng},${lat}?contours_minutes=20&polygons=true&access_token=${MAPBOX_TOKEN}`)
+    fetch(`https://api.mapbox.com/isochrone/v1/mapbox/${mode}/${lng},${lat}?contours_minutes=${mins}&polygons=true&access_token=${MAPBOX_TOKEN}`)
       .then(r => r.json())
       .catch(() => null)
   );
@@ -2752,6 +2912,8 @@ function clearLocationZones(closePanel = true) {
   if (locMarker) { locMarker.remove(); locMarker = null; }
   locTransportMarkers.forEach(m => m.remove());
   locTransportMarkers = [];
+  _lastLocLng = null; _lastLocLat = null;
+  document.getElementById('iso-legend').classList.remove('visible');
   if (closePanel) document.getElementById('loc-panel').classList.remove('open');
 }
 
