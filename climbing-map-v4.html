@@ -1350,6 +1350,23 @@
 <div id="count-badge"><span id="visible-count">314</span> gyms</div>
 
 <script>
+// ═══════════════════════════════════════════════════════════════
+//  SECURITY — referrer check
+//  Replace both values below with your Squarespace domain and
+//  the URL of your paywall/members page.
+//  Visitors who load the GitHub URL directly (not via your
+//  Squarespace embed) will be redirected to your paywall.
+// ═══════════════════════════════════════════════════════════════
+(function() {
+  var ALLOWED_REFERRER = 'euroclimbing.news';
+  var PAYWALL_URL      = 'https://euroclimbing.news/pro';
+  var ref = document.referrer;
+  var isLocal = window.location.hostname === 'localhost' ||
+                window.location.hostname === '127.0.0.1';
+  if (!isLocal && (ref === '' || !ref.includes(ALLOWED_REFERRER))) {
+    window.location.replace(PAYWALL_URL);
+  }
+})();
 
 // ═══════════════════════════════════════════════════════════════
 //  CONFIG — update this URL when you change your Google Sheet
@@ -2244,7 +2261,7 @@ function setMapLayer(layer) {
     if (map.getLayer(id))
       map.setLayoutProperty(id, 'visibility', layer === 'age' ? 'visible' : 'none');
   });
-  const densityIds = ['ecn-density-fill', 'ecn-eu-density-fill'];
+  const densityIds = ['ecn-density-fill', 'ecn-eu-density-fill-1', 'ecn-eu-density-fill-2'];
   densityIds.forEach(id => {
     if (map.getLayer(id))
       map.setLayoutProperty(id, 'visibility', layer === 'density' ? 'visible' : 'none');
@@ -2408,44 +2425,34 @@ function addAgeLayer() {
 const DENSITY_TILESET_ID   = 'euroclimbingnews.2n10lll3';
 const DENSITY_SOURCE_LAYER = 'uk_ireland_density-9g6owi';
 
-const EU_DENSITY_TILESET_ID   = 'euroclimbingnews.13sbhuxh';
-const EU_DENSITY_SOURCE_LAYER = 'europe_density_v4-ckujno';
+const EU_DENSITY_TILESET_1   = 'euroclimbingnews.98zfnqt2';
+const EU_DENSITY_SOURCE_1    = 'europe_density_v4_part1-9wbde7';
+const EU_DENSITY_TILESET_2   = 'euroclimbingnews.53vnt95s';
+const EU_DENSITY_SOURCE_2    = 'europe_density_v4_part2-d5z46z';
 
 function addDensityLayer() {
-  // ── EU-wide density (1km² GEOSTAT grid, base layer) ────────────
-  map.addSource('ecn-eu-density-src', {
+  // ── EU-wide density part 1 (polygon fills) ─────────────────────
+  map.addSource('ecn-eu-density-src-1', {
     type: 'vector',
-    url: `mapbox://${EU_DENSITY_TILESET_ID}`
+    url: `mapbox://${EU_DENSITY_TILESET_1}`
   });
-
-  // Permanent transparent loader — keeps EU tiles in memory for catchment
   map.addLayer({
-    id: 'ecn-eu-density-loader',
-    type: 'circle',
-    source: 'ecn-eu-density-src',
-    'source-layer': EU_DENSITY_SOURCE_LAYER,
+    id: 'ecn-eu-density-loader-1',
+    type: 'fill',
+    source: 'ecn-eu-density-src-1',
+    'source-layer': EU_DENSITY_SOURCE_1,
     layout: { visibility: 'visible' },
-    paint: { 'circle-opacity': 0, 'circle-radius': 0 }
+    paint: { 'fill-opacity': 0 }
   }, 'waterway-label');
-
-  // EU choropleth fill (circle layer — point data from our script)
   map.addLayer({
-    id: 'ecn-eu-density-fill',
-    type: 'circle',
-    source: 'ecn-eu-density-src',
-    'source-layer': EU_DENSITY_SOURCE_LAYER,
+    id: 'ecn-eu-density-fill-1',
+    type: 'fill',
+    source: 'ecn-eu-density-src-1',
+    'source-layer': EU_DENSITY_SOURCE_1,
     layout: { visibility: 'none' },
     paint: {
-      'circle-radius': [
-        'interpolate', ['linear'], ['zoom'],
-        3, 1.2,
-        6, 2.5,
-        8, 4.0,
-        10, 7.0
-      ],
-      'circle-color': [
-        'interpolate', ['linear'],
-        ['get', 'density'],
+      'fill-color': [
+        'interpolate', ['linear'], ['get', 'density'],
         0,    '#f0f7ff',
         50,   '#bfdbfe',
         500,  '#60a5fa',
@@ -2453,11 +2460,50 @@ function addDensityLayer() {
         5000, '#1e3a6e',
         10000,'#0c1a40'
       ],
-      'circle-opacity': [
+      'fill-opacity': [
         'interpolate', ['linear'], ['zoom'],
-        4, 0.55,
-        9, 0.45
-      ]
+        4, 0.65,
+        10, 0.55
+      ],
+      'fill-outline-color': 'rgba(0,0,0,0.04)'
+    }
+  }, 'waterway-label');
+
+  // ── EU-wide density part 2 ──────────────────────────────────────
+  map.addSource('ecn-eu-density-src-2', {
+    type: 'vector',
+    url: `mapbox://${EU_DENSITY_TILESET_2}`
+  });
+  map.addLayer({
+    id: 'ecn-eu-density-loader-2',
+    type: 'fill',
+    source: 'ecn-eu-density-src-2',
+    'source-layer': EU_DENSITY_SOURCE_2,
+    layout: { visibility: 'visible' },
+    paint: { 'fill-opacity': 0 }
+  }, 'waterway-label');
+  map.addLayer({
+    id: 'ecn-eu-density-fill-2',
+    type: 'fill',
+    source: 'ecn-eu-density-src-2',
+    'source-layer': EU_DENSITY_SOURCE_2,
+    layout: { visibility: 'none' },
+    paint: {
+      'fill-color': [
+        'interpolate', ['linear'], ['get', 'density'],
+        0,    '#f0f7ff',
+        50,   '#bfdbfe',
+        500,  '#60a5fa',
+        2000, '#2563ab',
+        5000, '#1e3a6e',
+        10000,'#0c1a40'
+      ],
+      'fill-opacity': [
+        'interpolate', ['linear'], ['zoom'],
+        4, 0.65,
+        10, 0.55
+      ],
+      'fill-outline-color': 'rgba(0,0,0,0.04)'
     }
   }, 'waterway-label');
 
@@ -2466,8 +2512,6 @@ function addDensityLayer() {
     type: 'vector',
     url: `mapbox://${DENSITY_TILESET_ID}`
   });
-
-  // Permanent transparent layer — keeps UK/Ireland tiles loaded for catchment calc
   map.addLayer({
     id: 'ecn-density-loader',
     type: 'fill',
@@ -2476,8 +2520,6 @@ function addDensityLayer() {
     layout: { visibility: 'visible' },
     paint: { 'fill-opacity': 0 }
   }, 'waterway-label');
-
-  // UK/Ireland choropleth: sits on top of EU layer, same colour scale
   map.addLayer({
     id: 'ecn-density-fill',
     type: 'fill',
@@ -2486,8 +2528,7 @@ function addDensityLayer() {
     layout: { visibility: 'none' },
     paint: {
       'fill-color': [
-        'interpolate', ['linear'],
-        ['get', 'density'],
+        'interpolate', ['linear'], ['get', 'density'],
         0,    '#f0f7ff',
         50,   '#bfdbfe',
         500,  '#60a5fa',
@@ -2547,9 +2588,9 @@ async function calcCatchmentPop(isoPolygon) {
   } catch(e) { console.warn('Age query failed:', e); }
 
   try {
-    euDensityFeatures = map.querySourceFeatures('ecn-eu-density-src', {
-      sourceLayer: EU_DENSITY_SOURCE_LAYER
-    });
+    const part1 = map.querySourceFeatures('ecn-eu-density-src-1', { sourceLayer: EU_DENSITY_SOURCE_1 });
+    const part2 = map.querySourceFeatures('ecn-eu-density-src-2', { sourceLayer: EU_DENSITY_SOURCE_2 });
+    euDensityFeatures = [...part1, ...part2];
   } catch(e) { console.warn('EU density query failed:', e); }
 
   // Build age lookup by area_code for fast access
