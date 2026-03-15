@@ -292,6 +292,8 @@
   #age-legend-note p { font-size: 0.67rem; color: var(--stone); line-height: 1.6; margin: 0; }
   #density-legend { display: none; }
   #density-legend.visible { display: block; }
+  #iso-legend { display: none; }
+  #iso-legend.visible { display: block; }
   #imd-legend-note { margin-top: 8px; border-top: 1px solid rgba(0,0,0,0.08); padding-top: 6px; }
   #imd-legend-note p { font-size: 0.67rem; color: var(--stone); line-height: 1.6; margin: 0; }
   .imd-legend-disclaimer { font-style: italic; margin-top: 4px !important; color: #aaa !important; font-size: 0.63rem !important; }
@@ -683,6 +685,15 @@
   }
   #loc-panel-close:hover { background: rgba(255,255,255,0.3); }
   #loc-panel-body { padding: 14px 18px 16px; }
+  #loc-slider-wrap { margin-bottom: 12px; }
+  #loc-time-slider {
+    width: 100%; accent-color: #1a3a5c;
+    height: 4px; cursor: pointer; margin-bottom: 3px;
+  }
+  #loc-slider-ticks {
+    display: flex; justify-content: space-between;
+    font-size: 0.62rem; color: var(--stone); padding: 0 2px;
+  }
   .loc-zone-row {
     display: grid; grid-template-columns: 80px 1fr 80px 1fr;
     align-items: center; padding: 8px 0;
@@ -1102,6 +1113,12 @@
     <button id="loc-panel-close" onclick="clearLocationZones()">✕</button>
   </div>
   <div id="loc-panel-body">
+    <div id="loc-slider-wrap">
+      <input type="range" id="loc-time-slider" min="10" max="60" step="10" value="20">
+      <div id="loc-slider-ticks">
+        <span>10</span><span>20</span><span>30</span><span>40</span><span>50</span><span>60</span>
+      </div>
+    </div>
     <div id="loc-zones">
       <div class="loc-zone-row" id="loc-row-walking">
         <span class="loc-zone-label">🚶 Walk</span>
@@ -1289,6 +1306,12 @@
   <div id="comparison-tray"></div>
   <button id="clear-selection-btn" onclick="clearSelection()">✕ Clear selection</button>
   <div id="legend">
+    <div id="iso-legend">
+      <h5>Travel Zones</h5>
+      <div class="bleg-row"><div class="bleg-swatch" style="background:#2a8a4a"></div> 🚶 Walk</div>
+      <div class="bleg-row"><div class="bleg-swatch" style="background:#1a6aaa"></div> 🚴 Cycle</div>
+      <div class="bleg-row"><div class="bleg-swatch" style="background:#c05a10"></div> 🚗 Drive</div>
+    </div>
     <div id="building-legend">
       <h5>Building Types</h5>
       <div class="bleg-row"><div class="bleg-swatch" style="background:#f59e0b"></div> Residential</div>
@@ -1350,6 +1373,23 @@
 <div id="count-badge"><span id="visible-count">314</span> gyms</div>
 
 <script>
+// ═══════════════════════════════════════════════════════════════
+//  SECURITY — referrer check
+//  Replace both values below with your Squarespace domain and
+//  the URL of your paywall/members page.
+//  Visitors who load the GitHub URL directly (not via your
+//  Squarespace embed) will be redirected to your paywall.
+// ═══════════════════════════════════════════════════════════════
+(function() {
+  var ALLOWED_REFERRER = 'euroclimbing.news';
+  var PAYWALL_URL      = 'https://euroclimbing.news/pro';
+  var ref = document.referrer;
+  var isLocal = window.location.hostname === 'localhost' ||
+                window.location.hostname === '127.0.0.1';
+  if (!isLocal && (ref === '' || !ref.includes(ALLOWED_REFERRER))) {
+    window.location.replace(PAYWALL_URL);
+  }
+})();
 
 // ═══════════════════════════════════════════════════════════════
 //  CONFIG — update this URL when you change your Google Sheet
@@ -2165,6 +2205,27 @@ function handleGuideOverlayClick(e) {
   if (e.target === document.getElementById('guide-overlay')) toggleGuide();
 }
 
+// ── LOCATION ANALYSIS SLIDER ─────────────────────────────────────
+function locMinutes() {
+  const slider = document.getElementById('loc-time-slider');
+  return slider ? parseInt(slider.value) : 20;
+}
+
+let locSliderTimer = null;
+let _lastLocLng = null, _lastLocLat = null;
+
+document.getElementById('loc-time-slider').addEventListener('input', function() {
+  document.getElementById('loc-panel-sub').textContent =
+    `${this.value}-min catchment zones`;
+  // Redraw if zones are active
+  if (_lastLocLng !== null) {
+    clearTimeout(locSliderTimer);
+    locSliderTimer = setTimeout(() => {
+      drawLocationZones(_lastLocLng, _lastLocLat);
+    }, 400);
+  }
+});
+
 // ── TRAVEL TIME SLIDER ───────────────────────────────────────────
 function isoMinutes() {
   const slider = document.getElementById('iso-time-slider');
@@ -2680,6 +2741,12 @@ const LOC_ZONE_CONFIG = {
 async function drawLocationZones(lng, lat) {
   clearLocationZones(false);
 
+  // Store for slider redraw
+  _lastLocLng = lng;
+  _lastLocLat = lat;
+
+  const mins = locMinutes();
+
   // Place pin marker
   const el = document.createElement('div');
   el.id = 'loc-cursor';
@@ -2688,7 +2755,10 @@ async function drawLocationZones(lng, lat) {
 
   // Open panel
   document.getElementById('loc-panel').classList.add('open');
-  document.getElementById('loc-panel-sub').textContent = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+  document.getElementById('loc-panel-sub').textContent = `${mins}-min catchment zones`;
+
+  // Show isochrone legend
+  document.getElementById('iso-legend').classList.add('visible');
 
   // Reset stats
   ['walking','cycling','driving'].forEach(mode => {
@@ -2702,7 +2772,7 @@ async function drawLocationZones(lng, lat) {
   // Fetch all 3 isochrones in parallel
   const modes = ['walking', 'cycling', 'driving'];
   const isoPromises = modes.map(mode =>
-    fetch(`https://api.mapbox.com/isochrone/v1/mapbox/${mode}/${lng},${lat}?contours_minutes=20&polygons=true&access_token=${MAPBOX_TOKEN}`)
+    fetch(`https://api.mapbox.com/isochrone/v1/mapbox/${mode}/${lng},${lat}?contours_minutes=${mins}&polygons=true&access_token=${MAPBOX_TOKEN}`)
       .then(r => r.json())
       .catch(() => null)
   );
@@ -2842,6 +2912,8 @@ function clearLocationZones(closePanel = true) {
   if (locMarker) { locMarker.remove(); locMarker = null; }
   locTransportMarkers.forEach(m => m.remove());
   locTransportMarkers = [];
+  _lastLocLng = null; _lastLocLat = null;
+  document.getElementById('iso-legend').classList.remove('visible');
   if (closePanel) document.getElementById('loc-panel').classList.remove('open');
 }
 
