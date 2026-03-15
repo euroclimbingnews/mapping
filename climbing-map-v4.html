@@ -1350,6 +1350,23 @@
 <div id="count-badge"><span id="visible-count">314</span> gyms</div>
 
 <script>
+// ═══════════════════════════════════════════════════════════════
+//  SECURITY — referrer check
+//  Replace both values below with your Squarespace domain and
+//  the URL of your paywall/members page.
+//  Visitors who load the GitHub URL directly (not via your
+//  Squarespace embed) will be redirected to your paywall.
+// ═══════════════════════════════════════════════════════════════
+(function() {
+  var ALLOWED_REFERRER = 'euroclimbing.news';
+  var PAYWALL_URL      = 'https://euroclimbing.news/pro';
+  var ref = document.referrer;
+  var isLocal = window.location.hostname === 'localhost' ||
+                window.location.hostname === '127.0.0.1';
+  if (!isLocal && (ref === '' || !ref.includes(ALLOWED_REFERRER))) {
+    window.location.replace(PAYWALL_URL);
+  }
+})();
 
 // ═══════════════════════════════════════════════════════════════
 //  CONFIG — update this URL when you change your Google Sheet
@@ -2603,26 +2620,23 @@ async function calcCatchmentPop(isoPolygon) {
     } catch(e) {}
   });
 
-  // EU: point features with density (people/km²) — each represents 1km²
-  // Only use EU features for cells NOT already covered by UK/Ireland data
+  // EU: polygon features with density (people/km²) — each cell is 1km²
+  // Use turf.centroid to get a representative point for the polygon
   const euSeen = new Set();
   euDensityFeatures.forEach(f => {
-    const coords = f.geometry && f.geometry.coordinates;
-    if (!coords) return;
-    const key = `${coords[0].toFixed(3)},${coords[1].toFixed(3)}`;
-    if (euSeen.has(key)) return;
-    euSeen.add(key);
+    if (!f.geometry) return;
     try {
-      const pt = turf.point(coords);
-      if (turf.booleanPointInPolygon(pt, isoPolygon)) {
-        // density = people/km², cell is 1km² so density ≈ population
+      const centroid = turf.centroid(f);
+      const [lng, lat] = centroid.geometry.coordinates;
+      const key = `${lng.toFixed(3)},${lat.toFixed(3)}`;
+      if (euSeen.has(key)) return;
+      euSeen.add(key);
+      if (turf.booleanPointInPolygon(centroid, isoPolygon)) {
         const pop = Number(f.properties.density) || 0;
-        // Only add if not in UK/Ireland coverage area (roughly)
-        const lng = coords[0], lat = coords[1];
+        // Skip cells already covered by the higher-res UK/Ireland layer
         const inUKIreland = (lng >= -11 && lng <= 2.5 && lat >= 49 && lat <= 61);
         if (!inUKIreland) {
           totalPop += pop;
-          // No age data for EU — skip age weighting
         }
       }
     } catch(e) {}
