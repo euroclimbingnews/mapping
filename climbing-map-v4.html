@@ -84,6 +84,38 @@
   }
   #add-gym-btn:hover { background: #c95510; border-color: #c95510; }
 
+  #fullscreen-btn {
+    padding: 6px 10px; border-radius: 6px;
+    background: rgba(255,255,255,0.12); border: 1.5px solid rgba(255,255,255,0.25);
+    color: var(--cream); font-size: 1rem; cursor: pointer;
+    transition: all 0.15s; flex-shrink: 0; line-height: 1;
+  }
+  #fullscreen-btn:hover { background: rgba(255,255,255,0.22); }
+  #fullscreen-btn .icon-expand  { display: inline; }
+  #fullscreen-btn .icon-shrink  { display: none; }
+  #fullscreen-btn.is-fullscreen .icon-expand { display: none; }
+  #fullscreen-btn.is-fullscreen .icon-shrink  { display: inline; }
+
+  /* ── IPHONE NUDGE ───────────────────────────────────────────── */
+  #iphone-nudge {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    z-index: 300; width: calc(100vw - 32px); max-width: 360px;
+  }
+  #iphone-nudge-inner {
+    background: #1a1a2e; color: white;
+    border-radius: 12px; padding: 14px 16px 14px 14px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+    border: 1px solid rgba(255,255,255,0.12);
+    font-size: 0.82rem; line-height: 1.55; position: relative;
+  }
+  #iphone-nudge-inner strong { display: block; margin-bottom: 5px; font-size: 0.88rem; }
+  #iphone-nudge-inner p { margin: 0; color: rgba(255,255,255,0.8); }
+  #iphone-nudge-close {
+    position: absolute; top: 10px; right: 12px;
+    cursor: pointer; font-size: 0.8rem; opacity: 0.6;
+  }
+  #iphone-nudge-close:hover { opacity: 1; }
+
   /* ── ADD GYM MODAL ──────────────────────────────────────────── */
   #add-gym-overlay {
     display: none; position: fixed; inset: 0; z-index: 200;
@@ -1173,6 +1205,10 @@
   </button>
   <button id="guide-btn" onclick="toggleGuide()">? Guide</button>
   <button id="add-gym-btn" onclick="toggleAddGym()">+ Add Gym</button>
+  <button id="fullscreen-btn" onclick="toggleFullscreen()" title="Toggle fullscreen">
+    <span class="icon-expand">⤢</span>
+    <span class="icon-shrink">⤡</span>
+  </button>
 </div>
 
 <!-- LAYERS PANEL -->
@@ -1373,7 +1409,6 @@
 <div id="count-badge"><span id="visible-count">314</span> gyms</div>
 
 <script>
-
 // ═══════════════════════════════════════════════════════════════
 //  SECURITY — referrer check
 //  Replace both values below with your Squarespace domain and
@@ -1391,7 +1426,7 @@
     window.location.replace(PAYWALL_URL);
   }
 })();
- 
+
 // ═══════════════════════════════════════════════════════════════
 //  CONFIG — update this URL when you change your Google Sheet
 // ═══════════════════════════════════════════════════════════════
@@ -2205,6 +2240,49 @@ function toggleGuide() {
 function handleGuideOverlayClick(e) {
   if (e.target === document.getElementById('guide-overlay')) toggleGuide();
 }
+
+// ── FULLSCREEN ────────────────────────────────────────────────────
+const isIPhone = /iPhone/.test(navigator.userAgent);
+
+function toggleFullscreen() {
+  if (isIPhone) {
+    showIPhoneNudge();
+    return;
+  }
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen().catch(() => {});
+  }
+}
+
+function showIPhoneNudge() {
+  const existing = document.getElementById('iphone-nudge');
+  if (existing) { existing.remove(); return; }
+  const nudge = document.createElement('div');
+  nudge.id = 'iphone-nudge';
+  nudge.innerHTML = `
+    <div id="iphone-nudge-inner">
+      <span id="iphone-nudge-close" onclick="document.getElementById('iphone-nudge').remove()">✕</span>
+      <strong>Full screen on iPhone</strong>
+      <p>Safari doesn't support full screen in the browser — sorry about that.<br>
+      For the best experience, tap <strong>Share</strong> <span style="font-size:1rem">⎋</span> then
+      <strong>Add to Home Screen</strong> to open ECN Pro as a full-screen app.</p>
+    </div>`;
+  document.body.appendChild(nudge);
+  setTimeout(() => { if (nudge.parentNode) nudge.remove(); }, 8000);
+}
+
+document.addEventListener('fullscreenchange', () => {
+  const btn = document.getElementById('fullscreen-btn');
+  if (document.fullscreenElement) {
+    btn.classList.add('is-fullscreen');
+    btn.title = 'Exit fullscreen';
+  } else {
+    btn.classList.remove('is-fullscreen');
+    btn.title = 'Toggle fullscreen';
+  }
+});
 
 // ── LOCATION ANALYSIS SLIDER ─────────────────────────────────────
 function locMinutes() {
