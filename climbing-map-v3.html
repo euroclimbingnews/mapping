@@ -2249,10 +2249,13 @@ function toggleFullscreen() {
     showIPhoneNudge();
     return;
   }
+  const el = document.documentElement;
   if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen().catch(() => {});
+    const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+    if (req) req.call(el).catch(err => console.warn('Fullscreen request failed:', err));
   } else {
-    document.exitFullscreen().catch(() => {});
+    const exit = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+    if (exit) exit.call(document).catch(err => console.warn('Exit fullscreen failed:', err));
   }
 }
 
@@ -2273,15 +2276,13 @@ function showIPhoneNudge() {
   setTimeout(() => { if (nudge.parentNode) nudge.remove(); }, 8000);
 }
 
-document.addEventListener('fullscreenchange', () => {
-  const btn = document.getElementById('fullscreen-btn');
-  if (document.fullscreenElement) {
-    btn.classList.add('is-fullscreen');
-    btn.title = 'Exit fullscreen';
-  } else {
-    btn.classList.remove('is-fullscreen');
-    btn.title = 'Toggle fullscreen';
-  }
+['fullscreenchange', 'webkitfullscreenchange'].forEach(evt => {
+  document.addEventListener(evt, () => {
+    const btn = document.getElementById('fullscreen-btn');
+    const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    btn.classList.toggle('is-fullscreen', isFs);
+    btn.title = isFs ? 'Exit fullscreen' : 'Toggle fullscreen';
+  });
 });
 
 // ── LOCATION ANALYSIS SLIDER ─────────────────────────────────────
