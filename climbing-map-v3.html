@@ -651,6 +651,80 @@
   .gym-marker:hover, .gym-marker.selected { transform: scale(1.5); }
   .gym-marker.selected { background: var(--forest); }
 
+  /* ── ROUND UP MARKERS ───────────────────────────────────── */
+  .roundup-marker {
+    width: 22px; height: 22px; border-radius: 4px;
+    border: 3px solid var(--white);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    cursor: pointer; transition: transform 0.15s;
+  }
+  .roundup-marker:hover { transform: scale(1.4); }
+  .roundup-marker.aged  { border-radius: 50%; } /* circle after 6 months */
+  .roundup-marker.status-opening   { background: #16a34a; }
+  .roundup-marker.status-announced { background: #7c3aed; }
+  .roundup-marker.status-closing   { background: #dc2626; }
+  .roundup-marker.status-closed    { background: #6b7280; }
+  .roundup-marker.status-expanding { background: #ea580c; }
+  .roundup-marker.status-relocating{ background: #0891b2; }
+  .roundup-marker.status-merging   { background: #d97706; }
+  .roundup-marker.status-renovating{ background: #2563ab; }
+  .roundup-marker.status-update    { background: #64748b; }
+
+  /* ── ROUND UP PANEL ─────────────────────────────────────── */
+  #roundup-panel {
+    position: fixed; top: 70px; right: 16px;
+    transform: translateX(120%);
+    transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+    z-index: 88; width: 300px; max-width: calc(100vw - 32px);
+    background: var(--cream); border-radius: 12px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+    border: 1px solid var(--sand);
+    overflow: hidden;
+  }
+  #roundup-panel.open { transform: translateX(0); }
+  #roundup-panel-header {
+    padding: 12px 16px 10px;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    color: white;
+  }
+  #roundup-panel-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.95rem; font-weight: 700; line-height: 1.3;
+  }
+  #roundup-panel-location {
+    font-size: 0.72rem; opacity: 0.82; margin-top: 3px;
+  }
+  #roundup-panel-close {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: rgba(255,255,255,0.2); border: none;
+    color: white; cursor: pointer; font-size: 0.85rem;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-left: 8px; transition: background 0.15s;
+  }
+  #roundup-panel-close:hover { background: rgba(255,255,255,0.35); }
+  #roundup-panel-body { padding: 12px 16px 14px; }
+  #roundup-status-badge {
+    display: inline-block; padding: 3px 10px;
+    border-radius: 20px; font-size: 0.7rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    margin-bottom: 8px; color: white;
+  }
+  #roundup-summary {
+    font-size: 0.82rem; color: var(--dark);
+    line-height: 1.6; margin-bottom: 10px;
+  }
+  #roundup-article-link {
+    display: block; font-size: 0.72rem; color: #000099;
+    text-decoration: none; margin-bottom: 8px;
+  }
+  #roundup-article-link:hover { text-decoration: underline; }
+  #roundup-notice {
+    font-size: 0.68rem; color: var(--stone);
+    line-height: 1.5; padding-top: 8px;
+    border-top: 1px solid var(--sand);
+    font-style: italic;
+  }
+
   /* ── GYM HOVER TOOLTIP ──────────────────────────────────── */
   #gym-tooltip {
     position: fixed; z-index: 9999;
@@ -1015,9 +1089,13 @@
       <div class="add-gym-checkboxes" id="ag-facilities">
         <label class="add-gym-check"><input type="checkbox" value="Bouldering">🪨 Bouldering</label>
         <label class="add-gym-check"><input type="checkbox" value="Ropes">🧗 Ropes</label>
+        <label class="add-gym-check"><input type="checkbox" value="Ropes">🧗 Ropes</label>
         <label class="add-gym-check"><input type="checkbox" value="Autobelay">⚙️ Autobelay</label>
         <label class="add-gym-check"><input type="checkbox" value="Café">☕ Café</label>
-        <label class="add-gym-check"><input type="checkbox" value="Moon/Kilter/TB">🌙 Moon/Kilter/TB</label>
+        <label class="add-gym-check"><input type="checkbox" value="Moon/Kilter/TB">🌙 Moonboard</label>
+        <label class="add-gym-check"><input type="checkbox" value="Kilter">🟠 Kilter Board</label>
+        <label class="add-gym-check"><input type="checkbox" value="Tension">🔵 Tension Board</label>
+        <label class="add-gym-check"><input type="checkbox" value="Woody">🟤 Woody Board</label>
         <label class="add-gym-check"><input type="checkbox" value="Training Space">💪 Training Space</label>
         <label class="add-gym-check"><input type="checkbox" value="Kids Zone">👶 Kids Zone</label>
         <label class="add-gym-check"><input type="checkbox" value="Speed Wall">⚡ Speed Wall</label>
@@ -1115,7 +1193,7 @@
       <div class="guide-section">
         <h3>🔎 Search & Filter</h3>
         <p>Use the search bar in the header to find a gym by name or location. Results appear as you type — click any result to fly to that gym and open its profile.</p>
-        <p>The filter bar below the header lets you narrow the map to gyms with specific features: bouldering, ropes, café, Moonboard/Kilter Board, kids zone, or speed wall. Select a filter to show only matching gyms.</p>
+        <p>The filter bar below the header lets you narrow the map to gyms with specific features: bouldering, ropes, autobelay, café, Moonboard, Kilter Board, Tension Board, Woody Board, kids zone, or speed wall. Select a filter to show only matching gyms.</p>
       </div>
 
       <div class="guide-section">
@@ -1131,6 +1209,25 @@
         <p>All submissions go to the ECN team for review before any changes are made to the map.</p>
       </div>
 
+    </div>
+  </div>
+</div>
+
+<!-- ROUND UP PANEL -->
+<div id="roundup-panel">
+  <div id="roundup-panel-header">
+    <div>
+      <div id="roundup-panel-title">Gym name</div>
+      <div id="roundup-panel-location"></div>
+    </div>
+    <button id="roundup-panel-close" onclick="closeRoundUpPanel()">✕</button>
+  </div>
+  <div id="roundup-panel-body">
+    <span id="roundup-status-badge"></span>
+    <div id="roundup-summary"></div>
+    <a id="roundup-article-link" href="#" target="_blank">📰 View source article →</a>
+    <div id="roundup-notice">
+      Recently reported by ECN. Data is unverified and subject to change.
     </div>
   </div>
 </div>
@@ -1205,7 +1302,8 @@
   </button>
   <button id="guide-btn" onclick="toggleGuide()">? Guide</button>
   <button id="add-gym-btn" onclick="toggleAddGym()">+ Add Gym</button>
-  <button id="fullscreen-btn" onclick="toggleFullscreen()" title="Toggle fullscreen">
+  <button id="fullscreen-btn" onclick="toggleFullscreen()"
+    title="Open in full screen">
     <span class="icon-expand">⤢</span>
     <span class="icon-shrink">⤡</span>
   </button>
@@ -1238,8 +1336,12 @@
   <button class="filter-btn active" data-filter="all">All gyms</button>
   <button class="filter-btn" data-filter="boulders">🪨 Bouldering</button>
   <button class="filter-btn" data-filter="ropes">🧗 Ropes</button>
+  <button class="filter-btn" data-filter="autobelay">⚙️ Autobelay</button>
   <button class="filter-btn" data-filter="cafe">☕ Café</button>
-  <button class="filter-btn" data-filter="moonboard">🌙 Moonboard / Kilter</button>
+  <button class="filter-btn" data-filter="moonboard">🌙 Moonboard</button>
+  <button class="filter-btn" data-filter="kilter">🟠 Kilter</button>
+  <button class="filter-btn" data-filter="tension">🔵 Tension</button>
+  <button class="filter-btn" data-filter="woody">🟤 Woody</button>
   <button class="filter-btn" data-filter="kids">👶 Kids Zone</button>
   <button class="filter-btn" data-filter="speed">⚡ Speed Wall</button>
 </div>
@@ -1431,6 +1533,10 @@
 //  CONFIG — update this URL when you change your Google Sheet
 // ═══════════════════════════════════════════════════════════════
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSwsrCp7nnygovZ1ZpsYbKjMZDyxBd3FLTPW2_nDWkLDqGfzVrqNoVjmErn1VkjrryYFvrjjNjHEejt/pub?gid=852920628&single=true&output=csv';
+
+// Round Up sheet — publish the "Round Up" tab as CSV and paste the URL here
+// File → Share → Publish to web → Round Up tab → CSV → copy URL
+const ROUNDUP_CSV_URL = ''; // ← paste Round Up tab CSV URL here when ready
 // How to get this URL:
 //   1. In Google Sheets: File → Share → Publish to web
 //   2. Select your sheet tab, choose "Comma-separated values (.csv)"
@@ -1523,9 +1629,13 @@ function parseCSV(text) {
         phone:     get('Phone'),
         cafe:      get('Café') || get('Cafe'),
         ropes:     get('Ropes'),
+        autobelay: get('Autobelay'),
         boulders:  get('Boulders'),
         speed:     get('Speed'),
-        moonboard: get('Moon/Kilter/TB'),
+        moonboard: get('Moon/Kilter/TB') || get('Moonboard'),
+        kilter:    get('Kilter'),
+        tension:   get('Tension'),
+        woody:     get('Woody'),
         training:  get('Training Space'),
         kids:      get('Kids Zone'),
         retail:    get('Retail'),
@@ -1566,6 +1676,8 @@ async function loadGyms() {
     hideLoading();
     // If map already loaded, build markers now; else wait for map load event
     if (map.loaded()) buildMarkers();
+    // Load round up data independently
+    loadRoundUpData();
   } catch (err) {
     console.error('Failed to load gym data:', err);
     showError(`⚠ Could not load gym data: ${err.message}`);
@@ -1576,9 +1688,13 @@ async function loadGyms() {
 function matchesFilter(props, filter) {
   if (filter === 'all') return true;
   if (filter === 'boulders') return props.boulders === 'Y';
-  if (filter === 'ropes') return props.ropes === 'Y' || props.ropes === 'AUTOBELAY';
+  if (filter === 'ropes')     return props.ropes     === 'Y';
+  if (filter === 'autobelay') return props.autobelay === 'Y' || props.ropes === 'AUTOBELAY';
   if (filter === 'cafe') return props.cafe && props.cafe.toUpperCase() === 'Y';
   if (filter === 'moonboard') return props.moonboard === 'Y';
+  if (filter === 'kilter')    return props.kilter    === 'Y';
+  if (filter === 'tension')   return props.tension   === 'Y';
+  if (filter === 'woody')     return props.woody     === 'Y';
   if (filter === 'kids') return props.kids === 'Y';
   if (filter === 'speed') return props.speed === 'Y';
   return true;
@@ -1668,9 +1784,13 @@ function showPanel(p, idx) {
 
   const amenities = [
     { key: 'boulders',  label: '🪨 Bouldering' },
-    { key: 'ropes',     label: '🧗 Ropes / Autobelay' },
+    { key: 'ropes',     label: '🧗 Ropes' },
+    { key: 'autobelay', label: '⚙️ Autobelay' },
     { key: 'cafe',      label: '☕ Café' },
-    { key: 'moonboard', label: '🌙 Moon/Kilter/TB' },
+    { key: 'moonboard', label: '🌙 Moonboard' },
+    { key: 'kilter',    label: '🟠 Kilter Board' },
+    { key: 'tension',   label: '🔵 Tension Board' },
+    { key: 'woody',     label: '🟤 Woody Board' },
     { key: 'training',  label: '💪 Training Space' },
     { key: 'kids',      label: '👶 Kids Zone' },
     { key: 'speed',     label: '⚡ Speed Wall' },
@@ -2063,7 +2183,6 @@ map.on('load', () => {
   addImdLayer();
   addAgeLayer();
   addDensityLayer();
-  addEuropeDensityLayer();
 });
 
 // ── LAYERS PANEL ───────────────────────────────────────────────
@@ -2241,12 +2360,18 @@ function handleGuideOverlayClick(e) {
   if (e.target === document.getElementById('guide-overlay')) toggleGuide();
 }
 
-// ── FULLSCREEN ────────────────────────────────────────────────────
+// ── FULLSCREEN / OPEN IN NEW TAB ─────────────────────────────────
 const isIPhone = /iPhone/.test(navigator.userAgent);
+const isInIframe = window.self !== window.top;
 
 function toggleFullscreen() {
   if (isIPhone) {
     showIPhoneNudge();
+    return;
+  }
+  // If embedded in Squarespace iframe, open in new tab instead
+  if (isInIframe) {
+    window.open(window.location.href, '_blank');
     return;
   }
   const el = document.documentElement;
@@ -2305,6 +2430,136 @@ document.getElementById('loc-time-slider').addEventListener('input', function() 
     }, 400);
   }
 });
+
+// ── ROUND UP DATA & MARKERS ───────────────────────────────────────
+
+const ROUNDUP_STATUS_COLORS = {
+  'Opening':    '#16a34a',
+  'Announced':  '#7c3aed',
+  'Closing':    '#dc2626',
+  'Closed':     '#6b7280',
+  'Expanding':  '#ea580c',
+  'Relocating': '#0891b2',
+  'Merging':    '#d97706',
+  'Renovating': '#2563ab',
+  'Update':     '#64748b'
+};
+
+let roundupMarkers = [];
+
+async function loadRoundUpData() {
+  if (!ROUNDUP_CSV_URL) return; // Not configured yet
+
+  try {
+    const resp = await fetch(ROUNDUP_CSV_URL);
+    const text = await resp.text();
+    const rows = text.trim().split('\n').map(r => r.split(','));
+    if (rows.length < 2) return;
+
+    // Headers: Extracted, Article, Gym Name, Location, Country,
+    //          Status, Summary, Lat, Lng, Add to Map, Date Approved, Notes
+    const headers = rows[0].map(h => h.trim().replace(/^"|"$/g, ''));
+    const idxOf   = k => headers.indexOf(k);
+
+    const iName     = idxOf('Gym Name');
+    const iLoc      = idxOf('Location');
+    const iStatus   = idxOf('Status');
+    const iSummary  = idxOf('Summary');
+    const iLat      = idxOf('Lat');
+    const iLng      = idxOf('Lng');
+    const iApproved = idxOf('Add to Map');
+    const iDate     = idxOf('Date Approved');
+    const iArticle  = idxOf('Article');
+
+    const gyms = rows.slice(1).map(row => {
+      const clean = row.map(c => c.trim().replace(/^"|"$/g, ''));
+      return {
+        name:        clean[iName]     || '',
+        location:    clean[iLoc]      || '',
+        status:      clean[iStatus]   || '',
+        summary:     clean[iSummary]  || '',
+        lat:         parseFloat(clean[iLat]),
+        lng:         parseFloat(clean[iLng]),
+        approved:    clean[iApproved] || '',
+        dateApproved:clean[iDate]     || '',
+        article:     clean[iArticle]  || ''
+      };
+    }).filter(g =>
+      g.approved === 'YES' &&
+      !isNaN(g.lat) && !isNaN(g.lng) &&
+      g.lat !== 0 && g.lng !== 0
+    );
+
+    buildRoundUpMarkers(gyms);
+  } catch(e) {
+    console.warn('Round Up data failed to load:', e);
+  }
+}
+
+function buildRoundUpMarkers(gyms) {
+  // Clear existing
+  roundupMarkers.forEach(m => m.remove());
+  roundupMarkers = [];
+
+  const now = new Date();
+
+  gyms.forEach(gym => {
+    const el = document.createElement('div');
+    const statusKey = gym.status.toLowerCase();
+    el.className = 'roundup-marker status-' + statusKey;
+
+    // Check if older than 6 months → switch to circle
+    let aged = false;
+    if (gym.dateApproved) {
+      const approved = new Date(gym.dateApproved);
+      const monthsDiff = (now - approved) / (1000 * 60 * 60 * 24 * 30.44);
+      if (monthsDiff > 6) {
+        aged = true;
+        el.classList.add('aged');
+      }
+    }
+
+    el.title = gym.name + ' — ' + gym.status;
+
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openRoundUpPanel(gym);
+    });
+
+    const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
+      .setLngLat([gym.lng, gym.lat])
+      .addTo(map);
+
+    roundupMarkers.push(marker);
+  });
+}
+
+function openRoundUpPanel(gym) {
+  // Close gym panel if open
+  document.getElementById('panel').classList.remove('open');
+
+  const color = ROUNDUP_STATUS_COLORS[gym.status] || '#64748b';
+
+  document.getElementById('roundup-panel-header').style.background = color;
+  document.getElementById('roundup-panel-title').textContent = gym.name;
+  document.getElementById('roundup-panel-location').textContent = '📍 ' + gym.location;
+
+  const badge = document.getElementById('roundup-status-badge');
+  badge.textContent = gym.status;
+  badge.style.background = color;
+
+  document.getElementById('roundup-summary').textContent = gym.summary;
+
+  const link = document.getElementById('roundup-article-link');
+  link.href = 'https://euroclimbing.news/articles/' + gym.article;
+  link.textContent = '📰 ' + gym.article.replace('-roundup', ' Round Up') + ' →';
+
+  document.getElementById('roundup-panel').classList.add('open');
+}
+
+function closeRoundUpPanel() {
+  document.getElementById('roundup-panel').classList.remove('open');
+}
 
 // ── TRAVEL TIME SLIDER ───────────────────────────────────────────
 function isoMinutes() {
@@ -3001,12 +3256,13 @@ function clearLocationZones(closePanel = true) {
 map.on('click', e => {
   // Ignore clicks on gym markers (they have their own handler)
   const features = map.queryRenderedFeatures(e.point, { layers: [] });
-  const clickedMarker = e.originalEvent.target.closest('.gym-marker, .transport-marker, #loc-cursor');
+  const clickedMarker = e.originalEvent.target.closest('.gym-marker, .transport-marker, .roundup-marker, #loc-cursor');
   if (clickedMarker) return;
 
-  // Close gym panel if open
+  // Close panels if open
   document.getElementById('panel').classList.remove('open');
   document.body.classList.remove('panel-open-mobile');
+  document.getElementById('roundup-panel').classList.remove('open');
   clearTransportMarkers();
 
   drawLocationZones(e.lngLat.lng, e.lngLat.lat);
