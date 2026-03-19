@@ -84,17 +84,7 @@
   }
   #add-gym-btn:hover { background: #c95510; border-color: #c95510; }
 
-  #fullscreen-btn {
-    padding: 6px 10px; border-radius: 6px;
-    background: rgba(255,255,255,0.12); border: 1.5px solid rgba(255,255,255,0.25);
-    color: var(--cream); font-size: 1rem; cursor: pointer;
-    transition: all 0.15s; flex-shrink: 0; line-height: 1;
-  }
-  #fullscreen-btn:hover { background: rgba(255,255,255,0.22); }
-  #fullscreen-btn .icon-expand  { display: inline; }
-  #fullscreen-btn .icon-shrink  { display: none; }
-  #fullscreen-btn.is-fullscreen .icon-expand { display: none; }
-  #fullscreen-btn.is-fullscreen .icon-shrink  { display: inline; }
+  #fullscreen-btn { display: none; }
 
   /* ── IPHONE NUDGE ───────────────────────────────────────────── */
   #iphone-nudge {
@@ -429,6 +419,35 @@
   #panel-address {
     font-size: 0.78rem; color: rgba(255,255,255,0.65);
     margin-top: 6px; line-height: 1.4;
+  }
+
+  /* ── CHAIN BADGE ─────────────────────────────────── */
+  #chain-badge-wrap {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 8px; flex-wrap: wrap;
+  }
+  #chain-badge {
+    font-size: 0.68rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.07em;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: white; border-radius: 20px;
+    padding: 2px 10px;
+  }
+  #chain-filter-btn {
+    font-size: 0.72rem; font-weight: 600;
+    background: var(--orange); border: none;
+    color: white; border-radius: 20px;
+    padding: 3px 10px; cursor: pointer;
+    transition: background 0.15s;
+  }
+  #chain-filter-btn:hover { background: #c95510; }
+
+  /* Chain-mode: dim non-chain markers */
+  .gym-marker.chain-dim { opacity: 0.15; }
+  .gym-marker.chain-highlight {
+    background: #f59e0b !important;
+    box-shadow: 0 0 0 3px white, 0 0 0 5px #f59e0b;
   }
 
   #panel-body { flex: 1; overflow-y: auto; padding: 18px 20px; }
@@ -1357,6 +1376,10 @@
   <div id="panel-header">
     <div id="panel-name">Gym Name</div>
     <div id="panel-address">Address</div>
+    <div id="chain-badge-wrap" style="display:none">
+      <span id="chain-badge"></span>
+      <button id="chain-filter-btn" onclick="filterByChain()"></button>
+    </div>
     <button id="compare-btn" onclick="toggleCompare()">📍 Add to comparison</button>
   </div>
   <div id="panel-tabs">
@@ -1642,6 +1665,7 @@ function parseCSV(text) {
         transport: get('Public Transport'),
         parking:   get('Parking'),
         price:     get('Peak Entry Price'),
+        chain:     get('Chain'),
       }
     });
   }
@@ -1762,6 +1786,24 @@ function showPanel(p, idx) {
   document.getElementById('panel-address').textContent = p.address;
   populateUpdateGymContext(p.name);
 
+  // Chain badge
+  const chainWrap = document.getElementById('chain-badge-wrap');
+  const chainBadge = document.getElementById('chain-badge');
+  const chainBtn   = document.getElementById('chain-filter-btn');
+  if (p.chain && p.chain.trim() !== '') {
+    const chainName = p.chain.trim();
+    const chainCount = GYMS.features.filter(f =>
+      f.properties.chain && f.properties.chain.trim() === chainName
+    ).length;
+    chainBadge.textContent = '🔗 ' + chainName;
+    chainBtn.textContent   = 'Show all ' + chainCount + ' location' + (chainCount !== 1 ? 's' : '');
+    chainBtn.dataset.chain = chainName;
+    chainWrap.style.display = 'flex';
+  } else {
+    chainWrap.style.display = 'none';
+    clearChainHighlight();
+  }
+
   const priceEl = document.getElementById('panel-price');
   priceEl.innerHTML = (p.price && p.price !== '')
     ? `<div class="price-badge">Peak entry: £${parseFloat(p.price).toFixed(2)}</div>`
@@ -1867,6 +1909,7 @@ function closePanel() {
   selectedGymIdx = null;
   clearTransportMarkers();
   clearPreviewTravel();
+  clearChainHighlight();
   document.getElementById('iso-clear').classList.remove('visible');
   document.getElementById('iso-status').textContent = '';
   document.getElementById('clear-selection-btn').classList.remove('visible');
@@ -2559,6 +2602,60 @@ function openRoundUpPanel(gym) {
 
 function closeRoundUpPanel() {
   document.getElementById('roundup-panel').classList.remove('open');
+}
+
+// ── CHAIN HIGHLIGHTING ────────────────────────────────────────────
+let chainHighlightActive = false;
+
+function filterByChain() {
+  const chainName = document.getElementById('chain-filter-btn').dataset.chain;
+  if (!chainName) return;
+
+  chainHighlightActive = true;
+
+  // Dim all markers then highlight chain members
+  document.querySelectorAll('.gym-marker').forEach((el, i) => {
+    const props = GYMS.features[i] && GYMS.features[i].properties;
+    if (!props) return;
+    const inChain = props.chain && props.chain.trim() === chainName;
+    el.classList.toggle('chain-dim',       !inChain);
+    el.classList.toggle('chain-highlight',  inChain);
+  });
+
+  // Fit map to show all chain gyms
+  const chainGyms = GYMS.features.filter(f =>
+    f.properties.chain && f.properties.chain.trim() === chainName
+  );
+  if (chainGyms.length > 1) {
+    const coords = chainGyms.map(f => f.geometry.coordinates);
+    const bounds = coords.reduce(
+      (b, c) => b.extend(c),
+      new mapboxgl.LngLatBounds(coords[0], coords[0])
+    );
+    map.fitBounds(bounds, { padding: 80, maxZoom: 12, duration: 800 });
+  }
+
+  // Update button to allow clearing
+  const btn = document.getElementById('chain-filter-btn');
+  btn.textContent = '✕ Clear chain view';
+  btn.onclick = clearChainHighlight;
+}
+
+function clearChainHighlight() {
+  if (!chainHighlightActive) return;
+  chainHighlightActive = false;
+  document.querySelectorAll('.gym-marker').forEach(el => {
+    el.classList.remove('chain-dim', 'chain-highlight');
+  });
+  const btn = document.getElementById('chain-filter-btn');
+  if (btn) {
+    const chainName = document.getElementById('chain-badge-wrap').dataset && btn.dataset.chain;
+    const chainCount = chainName ? GYMS.features.filter(f =>
+      f.properties.chain && f.properties.chain.trim() === chainName
+    ).length : 0;
+    btn.textContent = 'Show all ' + chainCount + ' location' + (chainCount !== 1 ? 's' : '');
+    btn.onclick = filterByChain;
+  }
 }
 
 // ── TRAVEL TIME SLIDER ───────────────────────────────────────────
