@@ -1,5 +1,7 @@
 name = "ecn-map"
 compatibility_date = "2025-03-21"
+workers_dev = true
+preview_urls = false
 
 [assets]
 directory = "."
