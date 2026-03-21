@@ -5,3 +5,4 @@ preview_urls = false
 
 [assets]
 directory = "."
+html_handling = "auto-trailing-slash"
