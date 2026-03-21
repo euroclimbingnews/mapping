@@ -1,0 +1,1332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECN — Climbing Gym Map (UK & Europe)</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --forest:   #2a4520;
+    --forest-m: #3a5e2e;
+    --stone:    #6b6b5e;
+    --cream:    #f7f3ec;
+    --warm:     #ede8df;
+    --orange:   #d4581a;
+    --sand:     #c8b89a;
+    --white:    #ffffff;
+    --shadow:   0 4px 24px rgba(0,0,0,0.13);
+    --radius:   12px;
+  }
+
+  html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1a1a18; overflow: hidden; }
+
+  /* ── HEADER ─────────────────────────────────────────── */
+  #header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: #000099;
+    display: flex; align-items: center; gap: 16px;
+    padding: 0 20px; height: 58px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+  }
+  #header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.15rem; color: var(--cream); letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+  #header h1 span { color: var(--sand); }
+
+  .header-pill {
+    background: rgba(255,255,255,0.12);
+    color: var(--cream); font-size: 0.72rem; font-weight: 500;
+    padding: 3px 10px; border-radius: 20px; letter-spacing: 0.04em;
+  }
+
+  /* Layers button in header */
+  #layers-btn {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.13);
+    border: 1px solid rgba(255,255,255,0.25);
+    color: var(--cream); font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem; font-weight: 500;
+    padding: 6px 13px; border-radius: 20px;
+    cursor: pointer; white-space: nowrap;
+    transition: background 0.2s, border-color 0.2s;
+    margin-left: auto;
+  }
+  #layers-btn:hover, #layers-btn.active {
+    background: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.5);
+  }
+  #layers-btn.active { background: var(--sand); color: var(--forest); border-color: var(--sand); }
+  #layers-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+  #guide-btn {
+    margin-left: auto;
+    padding: 6px 14px; border-radius: 6px;
+    background: rgba(255,255,255,0.12); border: 1.5px solid rgba(255,255,255,0.25);
+    color: var(--cream); font-size: 0.78rem; font-weight: 600;
+    font-family: 'DM Sans', sans-serif; cursor: pointer;
+    transition: all 0.15s; white-space: nowrap;
+  }
+  #guide-btn:hover { background: rgba(255,255,255,0.22); }
+
+  #add-gym-btn {
+    padding: 6px 14px; border-radius: 6px;
+    background: var(--orange); border: 1.5px solid var(--orange);
+    color: var(--white); font-size: 0.78rem; font-weight: 600;
+    font-family: 'DM Sans', sans-serif; cursor: pointer;
+    transition: all 0.15s; white-space: nowrap;
+  }
+  #add-gym-btn:hover { background: #c95510; border-color: #c95510; }
+
+  #fullscreen-btn { display: none; }
+
+  /* ── IPHONE NUDGE ───────────────────────────────────────────── */
+  #iphone-nudge {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    z-index: 300; width: calc(100vw - 32px); max-width: 360px;
+  }
+  #iphone-nudge-inner {
+    background: #1a1a2e; color: white;
+    border-radius: 12px; padding: 14px 16px 14px 14px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+    border: 1px solid rgba(255,255,255,0.12);
+    font-size: 0.82rem; line-height: 1.55; position: relative;
+  }
+  #iphone-nudge-inner strong { display: block; margin-bottom: 5px; font-size: 0.88rem; }
+  #iphone-nudge-inner p { margin: 0; color: rgba(255,255,255,0.8); }
+  #iphone-nudge-close {
+    position: absolute; top: 10px; right: 12px;
+    cursor: pointer; font-size: 0.8rem; opacity: 0.6;
+  }
+  #iphone-nudge-close:hover { opacity: 1; }
+
+  /* ── ADD GYM MODAL ──────────────────────────────────────────── */
+  #add-gym-overlay {
+    display: none; position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  #add-gym-overlay.open { display: flex; }
+  #add-gym-modal {
+    background: var(--cream); border-radius: 14px;
+    width: 100%; max-width: 560px; max-height: 88vh;
+    display: flex; flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    overflow: hidden;
+  }
+  #add-gym-modal-header {
+    background: #000099; color: white;
+    padding: 16px 22px 14px;
+    display: flex; justify-content: space-between; align-items: center;
+    flex-shrink: 0;
+  }
+  #add-gym-modal-header h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem; margin: 0;
+  }
+  #add-gym-modal-header p {
+    font-size: 0.72rem; color: rgba(255,255,255,0.7); margin: 3px 0 0;
+  }
+  #add-gym-modal-close {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: rgba(255,255,255,0.15); border: none;
+    color: white; font-size: 1rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: background 0.15s;
+  }
+  #add-gym-modal-close:hover { background: rgba(255,255,255,0.3); }
+  #add-gym-form-body {
+    overflow-y: auto; padding: 20px 24px 24px;
+  }
+  #add-gym-status {
+    display: none; border-radius: 6px;
+    padding: 10px 14px; margin-bottom: 14px;
+    font-size: 0.82rem; font-weight: 500;
+  }
+  #add-gym-status.success { background: #e8f2e4; color: #2a5e1e; display: block; }
+  #add-gym-status.error   { background: #fff3f3; color: #dc2626; display: block; }
+  .add-gym-row {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    margin-bottom: 10px;
+  }
+  .add-gym-row.full { grid-template-columns: 1fr; }
+  .add-gym-field { display: flex; flex-direction: column; gap: 4px; }
+  .add-gym-field label {
+    font-size: 0.72rem; font-weight: 600; color: var(--stone);
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .add-gym-field input, .add-gym-field select, .add-gym-field textarea {
+    padding: 8px 10px; border: 1.5px solid var(--sand);
+    border-radius: 7px; font-size: 0.82rem;
+    font-family: 'DM Sans', sans-serif;
+    background: var(--white); color: var(--dark);
+    transition: border-color 0.15s;
+  }
+  .add-gym-field input:focus, .add-gym-field select:focus, .add-gym-field textarea:focus {
+    outline: none; border-color: #000099;
+  }
+  .add-gym-checkboxes {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin-bottom: 14px;
+  }
+  .add-gym-check {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 0.78rem; color: var(--dark);
+    background: var(--white); border: 1.5px solid var(--sand);
+    border-radius: 20px; padding: 4px 10px; cursor: pointer;
+    transition: all 0.15s; user-select: none;
+  }
+  .add-gym-check input { display: none; }
+  .add-gym-check.checked { background: #e8f2e4; border-color: #4a8a3e; color: #2a5e1e; }
+  .add-gym-section-label {
+    font-size: 0.7rem; font-weight: 600; color: var(--stone);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    margin: 16px 0 8px;
+  }
+  #add-gym-submit {
+    width: 100%; padding: 11px; border-radius: 8px;
+    background: #000099; border: none; color: white;
+    font-size: 0.88rem; font-weight: 600;
+    font-family: 'DM Sans', sans-serif; cursor: pointer;
+    margin-top: 6px; transition: background 0.15s;
+  }
+  #add-gym-submit:hover { background: #000077; }
+  #add-gym-submit:disabled { background: var(--stone); cursor: not-allowed; }
+
+  /* ── USER GUIDE MODAL ───────────────────────────────────── */
+  #guide-overlay {
+    display: none; position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  #guide-overlay.open { display: flex; }
+  #guide-modal {
+    background: var(--cream); border-radius: 14px;
+    width: 100%; max-width: 680px; max-height: 85vh;
+    display: flex; flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    overflow: hidden;
+  }
+  #guide-modal-header {
+    background: #000099; color: white;
+    padding: 20px 24px 16px;
+    display: flex; justify-content: space-between; align-items: center;
+    flex-shrink: 0;
+  }
+  #guide-modal-header h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem; margin: 0;
+  }
+  #guide-modal-header p {
+    font-size: 0.75rem; color: rgba(255,255,255,0.7);
+    margin: 4px 0 0;
+  }
+  #guide-close {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: rgba(255,255,255,0.15); border: none;
+    color: white; font-size: 1rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: background 0.15s;
+  }
+  #guide-close:hover { background: rgba(255,255,255,0.3); }
+  #guide-body {
+    overflow-y: auto; padding: 24px 28px 28px;
+    line-height: 1.65;
+  }
+  .guide-section {
+    margin-bottom: 24px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--sand);
+  }
+  .guide-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .guide-section h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem; color: #000099;
+    margin: 0 0 10px; display: flex; align-items: center; gap: 8px;
+  }
+  .guide-section p { margin: 0 0 8px; font-size: 0.83rem; color: #3a3a30; }
+  .guide-section p:last-child { margin-bottom: 0; }
+  .guide-tip {
+    background: #f0f4ff; border-left: 3px solid #000099;
+    border-radius: 0 6px 6px 0;
+    padding: 8px 12px; margin-top: 8px;
+    font-size: 0.78rem; color: #1a1a60;
+  }
+  .guide-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    margin-top: 10px;
+  }
+  .guide-card {
+    background: var(--warm); border: 1px solid var(--sand);
+    border-radius: 8px; padding: 10px 12px;
+  }
+  .guide-card strong { display: block; font-size: 0.78rem; color: var(--forest); margin-bottom: 3px; }
+  .guide-card span { font-size: 0.73rem; color: var(--stone); }
+  @media (max-width: 500px) {
+    #guide-body { padding: 16px 18px 20px; }
+    .guide-grid { grid-template-columns: 1fr; }
+  }
+
+
+  /* Search bar in header */
+  #search-wrap {
+    flex: 1; max-width: 300px; margin-left: auto;
+    position: relative;
+  }
+  #gym-search {
+    width: 100%; padding: 8px 16px 8px 36px;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 20px; color: var(--white);
+    font-size: 0.85rem; font-family: 'DM Sans', sans-serif;
+    outline: none; transition: background 0.2s, border-color 0.2s;
+  }
+  #gym-search::placeholder { color: rgba(255,255,255,0.55); }
+  #gym-search:focus { background: rgba(255,255,255,0.22); border-color: rgba(255,255,255,0.5); }
+  #search-icon {
+    position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+    color: rgba(255,255,255,0.6); font-size: 0.95rem; pointer-events: none;
+  }
+  #search-results {
+    position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+    background: var(--white); border-radius: var(--radius);
+    box-shadow: var(--shadow); overflow: hidden; max-height: 280px; overflow-y: auto;
+    display: none; z-index: 200;
+  }
+  #search-results.open { display: block; }
+  .search-item {
+    padding: 10px 16px; cursor: pointer; font-size: 0.85rem;
+    border-bottom: 1px solid #f0ece6; transition: background 0.15s;
+  }
+  .search-item:last-child { border-bottom: none; }
+  .search-item:hover { background: var(--warm); }
+  .search-item strong { display: block; color: var(--forest); }
+  .search-item small { color: var(--stone); font-size: 0.75rem; }
+
+  /* ── MAP ─────────────────────────────────────────────── */
+  #map {
+    position: fixed; top: 58px; left: 0; right: 0; bottom: 0;
+  }
+
+  /* ── FILTER BAR ──────────────────────────────────────── */
+  #filters {
+    position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
+    z-index: 50; display: flex; gap: 8px; flex-wrap: nowrap;
+    background: rgba(247,243,236,0.92);
+    backdrop-filter: blur(8px);
+    border-radius: 30px;
+    padding: 7px 12px;
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(200,184,154,0.5);
+  }
+  .filter-btn {
+    padding: 5px 13px; border-radius: 20px; border: 1.5px solid var(--sand);
+    background: transparent; font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem; font-weight: 500; color: var(--stone);
+    cursor: pointer; transition: all 0.18s; white-space: nowrap;
+  }
+  .filter-btn:hover { border-color: var(--forest-m); color: var(--forest); }
+  .filter-btn.active { background: var(--forest); color: var(--white); border-color: var(--forest); }
+  .filter-btn.danger { border-color: #c0392b; color: #c0392b; }
+  .filter-btn.danger:hover { background: #c0392b; color: var(--white); }
+
+  /* ── SIDEBAR PANEL ───────────────────────────────────── */
+  #panel {
+    position: fixed; top: 58px; right: 0; bottom: 0;
+    width: 340px; background: var(--cream);
+    transform: translateX(100%); transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+    z-index: 80; display: flex; flex-direction: column;
+    border-left: 1px solid var(--sand);
+    box-shadow: -6px 0 30px rgba(0,0,0,0.12);
+  }
+  #panel.open { transform: translateX(0); }
+
+  #panel-close {
+    position: absolute; top: 14px; right: 14px;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--warm); border: 1.5px solid var(--sand);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; color: var(--stone); transition: all 0.15s; z-index: 2;
+  }
+  #panel-close:hover { background: var(--forest); color: var(--white); border-color: var(--forest); }
+
+  #panel-header {
+    padding: 22px 20px 16px;
+    border-bottom: 1px solid var(--sand);
+    background: var(--forest);
+    flex-shrink: 0;
+  }
+  #panel-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.25rem; color: var(--white);
+    line-height: 1.3; padding-right: 36px;
+  }
+  #panel-address {
+    font-size: 0.78rem; color: rgba(255,255,255,0.65);
+    margin-top: 6px; line-height: 1.4;
+  }
+
+  /* ── CHAIN BADGE ─────────────────────────────────── */
+  #chain-badge-wrap {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 8px; flex-wrap: wrap;
+  }
+  #chain-badge {
+    font-size: 0.68rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.07em;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: white; border-radius: 20px;
+    padding: 2px 10px;
+  }
+  #chain-filter-btn {
+    font-size: 0.72rem; font-weight: 600;
+    background: var(--orange); border: none;
+    color: white; border-radius: 20px;
+    padding: 3px 10px; cursor: pointer;
+    transition: background 0.15s;
+  }
+  #chain-filter-btn:hover { background: #c95510; }
+
+  /* Chain-mode: hide non-chain markers, highlight chain in navy */
+  .gym-marker.chain-dim { display: none; }
+  .gym-marker.chain-highlight {
+    background: #000099 !important;
+    box-shadow: 0 0 0 3px white, 0 0 0 5px #000099;
+  }
+
+  #panel-body { flex: 1; overflow-y: auto; padding: 18px 20px; }
+
+  /* ── PANEL TABS ─────────────────────────────────────── */
+  #panel-tabs {
+    display: flex; flex-shrink: 0;
+    border-bottom: 1px solid var(--sand);
+    background: var(--warm);
+  }
+  .panel-tab {
+    flex: 1; padding: 10px 0;
+    font-size: 0.75rem; font-weight: 600; text-align: center;
+    cursor: pointer; color: var(--stone); border: none;
+    background: none; transition: all 0.15s;
+    border-bottom: 2px solid transparent;
+    letter-spacing: 0.04em;
+  }
+  .panel-tab:hover { color: var(--forest); }
+  .panel-tab.active { color: var(--forest); border-bottom-color: var(--forest); background: var(--cream); }
+
+  .panel-tab-content { display: none; flex: 1; overflow-y: auto; }
+  .panel-tab-content.active { display: block; }
+
+  /* ── UPDATE FORM ─────────────────────────────────────── */
+  #update-form { padding: 18px 20px; }
+  #update-form h4 {
+    font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--stone); margin-bottom: 14px;
+  }
+  .update-field { margin-bottom: 14px; }
+  .update-field label {
+    display: block; font-size: 0.73rem; font-weight: 500;
+    color: var(--forest); margin-bottom: 4px;
+  }
+  .update-field input, .update-field textarea {
+    width: 100%; box-sizing: border-box;
+    padding: 8px 10px; border-radius: 6px;
+    border: 1.5px solid var(--sand); background: var(--white);
+    font-size: 0.8rem; font-family: 'DM Sans', sans-serif;
+    color: #3a3a30; transition: border-color 0.15s;
+    resize: vertical;
+  }
+  .update-field input:focus, .update-field textarea:focus {
+    outline: none; border-color: var(--forest);
+  }
+  .update-field input::placeholder, .update-field textarea::placeholder {
+    color: #b5aba0;
+  }
+  .closed-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 8px;
+    background: #fff3f3; border: 1.5px solid #fca5a5;
+    margin-bottom: 14px; cursor: pointer;
+  }
+  .closed-row input[type=checkbox] { accent-color: #dc2626; width: 16px; height: 16px; cursor: pointer; }
+  .closed-row label { font-size: 0.8rem; font-weight: 500; color: #dc2626; cursor: pointer; margin: 0; }
+  #update-submit {
+    width: 100%; padding: 10px;
+    background: var(--forest); color: var(--white);
+    border: none; border-radius: var(--radius);
+    font-size: 0.82rem; font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer; transition: background 0.15s;
+    margin-top: 4px;
+  }
+  #update-submit:hover { background: #1a4a2e; }
+  #update-submit:disabled { background: var(--stone); cursor: not-allowed; }
+  #update-status {
+    margin-top: 10px; padding: 10px 12px;
+    border-radius: 8px; font-size: 0.78rem; text-align: center;
+    display: none;
+  }
+  #update-status.success { background: #e8f2e4; color: #2a5e1e; display: block; }
+  #update-status.error   { background: #fff3f3; color: #dc2626; display: block; }
+
+  /* Price badge */
+  .price-badge {
+    display: inline-block;
+    background: var(--orange); color: var(--white);
+    font-size: 0.85rem; font-weight: 600;
+    padding: 4px 12px; border-radius: 20px; margin-bottom: 14px;
+  }
+  .price-badge.unknown { background: var(--stone); }
+
+  /* Amenity tags */
+  .amenity-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+  .tag {
+    display: flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 500;
+  }
+  .tag.yes { background: #e8f2e4; color: #2a5e1e; }
+  .tag.no  { background: #f0ede8; color: #9a9080; }
+
+  /* Transport */
+  .transport-section { margin-bottom: 18px; }
+  .transport-section h4 { font-size: 0.72rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--stone); margin-bottom: 6px; }
+  .transport-pills { display: flex; flex-wrap: wrap; gap: 5px; }
+  .transport-pill {
+    padding: 3px 9px; background: var(--warm); border: 1px solid var(--sand);
+    border-radius: 6px; font-size: 0.72rem; color: var(--stone); font-weight: 500;
+  }
+
+  /* Links */
+  #panel-links { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+  .panel-link {
+    flex: 1; min-width: 120px;
+    padding: 8px 12px; border-radius: var(--radius);
+    background: var(--warm); border: 1.5px solid var(--sand);
+    text-decoration: none; font-size: 0.78rem; font-weight: 500; color: var(--forest);
+    text-align: center; transition: all 0.15s; cursor: pointer;
+  }
+  .panel-link:hover { background: var(--forest); color: var(--white); border-color: var(--forest); }
+
+  /* ── ISOCHRONE SECTION ───────────────────────────────── */
+  /* ── COMPARE BUTTON ──────────────────────────────────── */
+  #compare-btn {
+    display: inline-block; margin-top: 10px;
+    padding: 5px 14px; border-radius: 20px;
+    border: 1.5px solid rgba(255,255,255,0.35);
+    background: rgba(255,255,255,0.12);
+    color: var(--cream); font-family: 'DM Sans', sans-serif;
+    font-size: 0.72rem; font-weight: 500;
+    cursor: pointer; transition: all 0.15s;
+  }
+  #compare-btn:hover { background: rgba(255,255,255,0.22); border-color: rgba(255,255,255,0.6); }
+  #compare-btn.pinned { background: rgba(255,255,255,0.28); border-color: var(--white); font-weight: 600; }
+  #compare-btn.full { opacity: 0.5; cursor: not-allowed; }
+
+  /* ── TRANSPORT STOPS STATUS ──────────────────────────── */
+  #transport-stops-status {
+    font-size: 0.71rem; color: var(--stone); font-style: italic;
+    margin-top: 5px; min-height: 16px;
+  }
+
+  /* ── TRANSPORT STOP MARKERS ──────────────────────────── */
+  .transport-marker {
+    font-size: 17px; line-height: 1; cursor: default;
+    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.45));
+    transition: transform 0.12s;
+  }
+  .transport-marker:hover { transform: scale(1.25); }
+
+  /* ── COMPARISON TRAY ─────────────────────────────────── */
+  #comparison-tray {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  #comparison-tray:empty { display: none; }
+  .compare-chip {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(247,243,236,0.93); backdrop-filter: blur(8px);
+    border-radius: 10px; padding: 7px 10px 7px 12px;
+    box-shadow: var(--shadow); border: 1px solid rgba(200,184,154,0.5);
+    font-size: 0.76rem; max-width: 230px;
+    animation: chipIn 0.2s ease;
+  }
+  @keyframes chipIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .compare-dot {
+    width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0;
+  }
+  .compare-info { flex: 1; min-width: 0; }
+  .compare-name { color: var(--forest); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .compare-mode { color: var(--stone); font-size: 0.68rem; margin-top: 1px; }
+  .compare-remove {
+    background: none; border: none; cursor: pointer;
+    color: var(--stone); font-size: 0.85rem; padding: 2px 4px;
+    border-radius: 4px; line-height: 1; flex-shrink: 0;
+    transition: color 0.12s;
+  }
+  .compare-remove:hover { color: #c0392b; }
+
+  /* ══════════════════════════════════════════════════════
+     MOBILE STYLES  (≤ 768px)
+  ══════════════════════════════════════════════════════ */
+  @media (max-width: 768px) {
+
+    /* Header: stack into two rows */
+    #header {
+      height: auto;
+      flex-wrap: wrap;
+      padding: 10px 16px 10px;
+      gap: 6px;
+      align-items: center;
+    }
+    #header h1 { font-size: 1rem; }
+    .header-pill { font-size: 0.68rem; padding: 2px 8px; }
+
+    /* Search goes full-width on second row */
+    #search-wrap {
+      order: 3;
+      flex: none;
+      width: 100%;
+      max-width: 100%;
+      margin-left: 0;
+    }
+    #search-results { max-height: 200px; }
+
+    /* Map: starts below taller header (≈ 94px) + filter bar (≈ 46px) */
+    #map { top: 140px; }
+
+    /* Filter bar: full-width horizontal scroll strip */
+    #filters {
+      top: 94px;
+      left: 0; right: 0;
+      transform: none;
+      border-radius: 0;
+      padding: 8px 12px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      justify-content: flex-start;
+      border-left: none; border-right: none; border-top: none;
+      border-bottom: 1px solid rgba(200,184,154,0.4);
+      border-radius: 0;
+      gap: 6px;
+    }
+    #filters::-webkit-scrollbar { display: none; }
+    .filter-btn { font-size: 0.75rem; padding: 5px 11px; flex-shrink: 0; }
+
+    /* Panel: slide up from bottom as a sheet */
+    #panel {
+      top: auto;
+      bottom: 0; left: 0; right: 0;
+      width: 100%;
+      height: 72vh;
+      max-height: 72vh;
+      transform: translateY(100%);
+      border-left: none;
+      border-top: 1px solid var(--sand);
+      border-radius: 18px 18px 0 0;
+      box-shadow: 0 -8px 40px rgba(0,0,0,0.18);
+    }
+    #panel.open { transform: translateY(0); }
+
+    /* Drag handle visible on mobile */
+    #panel-drag-handle { display: block; }
+
+    /* Panel header padding tweak */
+    #panel-header { padding: 14px 20px 14px; }
+    #panel-name { font-size: 1.1rem; padding-right: 40px; }
+
+    /* Larger tap targets for markers */
+    .gym-marker { width: 22px; height: 22px; border-width: 3px; }
+
+    /* Show legend on mobile, compact sizing */
+
+    #imd-legend p { font-size: 0.62rem; }
+
+    /* Count badge: smaller, tucked into corner */
+    #count-badge {
+      bottom: 16px; right: 55px;
+      padding: 7px 12px;
+      font-size: 0.72rem;
+      border-radius: 10px;
+    }
+    #count-badge span { font-size: 0.95rem; }
+
+    /* Mapbox nav controls: move up so they don't overlap bottom sheet */
+    .mapboxgl-ctrl-bottom-right {
+      bottom: 16px !important;
+      right: 12px !important;
+      /* hidden when panel open — handled by JS class */
+    }
+    .panel-open-mobile .mapboxgl-ctrl-bottom-right {
+      bottom: 76vh !important;
+    }
+
+    /* Make panel-close easier to tap */
+    #panel-close {
+      width: 36px; height: 36px; font-size: 1.1rem;
+      top: 12px; right: 12px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- ADD GYM MODAL -->
+<div id="add-gym-overlay" onclick="handleAddGymOverlayClick(event)">
+  <div id="add-gym-modal">
+    <div id="add-gym-modal-header">
+      <div>
+        <h2>➕ Add a Gym</h2>
+        <p>Submit a new climbing facility for review by the ECN team</p>
+      </div>
+      <button id="add-gym-modal-close" onclick="toggleAddGym()">✕</button>
+    </div>
+    <div id="add-gym-form-body">
+      <div id="add-gym-status"></div>
+
+      <div class="add-gym-section-label">Gym Details</div>
+      <div class="add-gym-row full">
+        <div class="add-gym-field">
+          <label>Gym Name *</label>
+          <input type="text" id="ag-name" placeholder="e.g. The Climbing Hangar">
+        </div>
+      </div>
+      <div class="add-gym-row full">
+        <div class="add-gym-field">
+          <label>Full Address *</label>
+          <input type="text" id="ag-address" placeholder="Street, City, Postcode">
+        </div>
+      </div>
+      <div class="add-gym-row">
+        <div class="add-gym-field">
+          <label>Website</label>
+          <input type="text" id="ag-website" placeholder="https://…">
+        </div>
+        <div class="add-gym-field">
+          <label>Phone</label>
+          <input type="text" id="ag-phone" placeholder="+44…">
+        </div>
+      </div>
+      <div class="add-gym-row">
+        <div class="add-gym-field">
+          <label>Entry Price</label>
+          <input type="text" id="ag-price" placeholder="e.g. £12 day pass">
+        </div>
+        <div class="add-gym-field">
+          <label>Type</label>
+          <select id="ag-type">
+            <option value="">— Select —</option>
+            <option value="Standalone gym">Standalone gym</option>
+            <option value="Leisure centre wall">Leisure centre wall</option>
+            <option value="University wall">University wall</option>
+            <option value="Outdoor wall">Outdoor wall</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="add-gym-section-label">Facilities</div>
+      <div class="add-gym-checkboxes" id="ag-facilities">
+        <label class="add-gym-check"><input type="checkbox" value="Bouldering">🪨 Bouldering</label>
+        <label class="add-gym-check"><input type="checkbox" value="Ropes">🧗 Ropes</label>
+        <label class="add-gym-check"><input type="checkbox" value="Ropes">🧗 Ropes</label>
+        <label class="add-gym-check"><input type="checkbox" value="Autobelay">⚙️ Autobelay</label>
+        <label class="add-gym-check"><input type="checkbox" value="Café">☕ Café</label>
+        <label class="add-gym-check"><input type="checkbox" value="Moon/Kilter/TB">🌙 Moonboard</label>
+        <label class="add-gym-check"><input type="checkbox" value="Kilter">🟠 Kilter Board</label>
+        <label class="add-gym-check"><input type="checkbox" value="Tension">🔵 Tension Board</label>
+        <label class="add-gym-check"><input type="checkbox" value="Woody">🟤 Woody Board</label>
+        <label class="add-gym-check"><input type="checkbox" value="Training Space">💪 Training Space</label>
+        <label class="add-gym-check"><input type="checkbox" value="Kids Zone">👶 Kids Zone</label>
+        <label class="add-gym-check"><input type="checkbox" value="Speed Wall">⚡ Speed Wall</label>
+        <label class="add-gym-check"><input type="checkbox" value="Retail">🛍️ Retail</label>
+        <label class="add-gym-check"><input type="checkbox" value="Parking">🅿️ Parking</label>
+      </div>
+
+      <div class="add-gym-section-label">Additional Info</div>
+      <div class="add-gym-row full">
+        <div class="add-gym-field">
+          <label>Notes</label>
+          <textarea id="ag-notes" rows="3" placeholder="Opening hours, membership options, anything else useful…"></textarea>
+        </div>
+      </div>
+      <div class="add-gym-row full">
+        <div class="add-gym-field">
+          <label>Your name / contact (optional)</label>
+          <input type="text" id="ag-submitter" placeholder="So we can follow up if needed">
+        </div>
+      </div>
+
+      <button id="add-gym-submit" onclick="submitAddGym()">Submit for Review</button>
+      <p style="font-size:0.68rem;color:var(--stone);margin-top:10px;line-height:1.5;text-align:center;">
+        All submissions are reviewed by the ECN team before appearing on the map. Fields marked * are required.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- USER GUIDE MODAL -->
+<div id="guide-overlay" onclick="handleGuideOverlayClick(event)">
+  <div id="guide-modal">
+    <div id="guide-modal-header">
+      <div>
+        <h2>ECN — Map User Guide</h2>
+        <p>Everything you need to get started with the free ECN Gym Map</p>
+      </div>
+      <button id="guide-close" onclick="toggleGuide()">✕</button>
+    </div>
+    <div id="guide-body">
+
+      <div class="guide-section">
+        <h3>🗺️ Getting Started</h3>
+        <p>The ECN Gym Map is a free resource showing climbing facilities across the UK, Ireland and Europe. All 343 mapped sites are shown as orange dots. Pan and zoom using your mouse or trackpad — on mobile, use touch gestures.</p>
+        <div class="guide-tip">💡 Click any orange marker to open that gym's profile. Search by name using the search bar in the header.</div>
+      </div>
+
+      <div class="guide-section">
+        <h3>🏟️ Gym Profiles</h3>
+        <p>Click any marker to open the gym's profile panel. Each listing shows the gym's name, address, entry price, website, phone number, and confirmed amenities — bouldering, ropes, café, training boards, kids zone and more.</p>
+        <p>The <strong>Public Transport Nearby</strong> section shows the number of stops within 600m, pulled live from OpenStreetMap.</p>
+        <div class="guide-tip">💡 If a gym belongs to a chain, a badge appears in the panel — click <strong>Show all locations</strong> to highlight every site in that group on the map.</div>
+      </div>
+
+      <div class="guide-section">
+        <h3>🔎 Search & Filter</h3>
+        <p>Use the search bar in the header to find a gym by name. Results appear as you type — click any result to fly to that gym and open its profile.</p>
+        <p>The filter bar below the header lets you narrow the map to gyms with specific features: bouldering, ropes, autobelay, café, Moonboard, Kilter, Tension, Woody, kids zone, or speed wall.</p>
+      </div>
+
+      <div class="guide-section">
+        <h3>➕ Add a Missing Gym</h3>
+        <p>Know of a facility that isn't on the map? Click <strong>+ Add Gym</strong> in the header to submit it. Provide as much detail as you can — name, address, website, type and amenities. All submissions are reviewed by the ECN team before appearing on the map.</p>
+        <div class="guide-tip">💡 The more detail you provide, the faster we can verify and add the listing.</div>
+      </div>
+
+      <div class="guide-section">
+        <h3>✏️ Suggest a Correction</h3>
+        <p>If a gym's information is outdated or incorrect, open the profile and click the <strong>Update Info</strong> tab. You can submit corrections for the name, address, website, entry price, or report a permanent closure. All submissions are reviewed before any changes are made.</p>
+      </div>
+
+      <div class="guide-section">
+        <h3>📊 ECN Pro</h3>
+        <p>This is the free version of the ECN map. <strong>ECN Pro</strong> adds population density and demographic overlays, adjustable walk/cycle/drive catchment analysis with population counts, competitor gym counts within any catchment zone, and location analysis for any point in Europe.</p>
+        <p>Visit <a href="https://euroclimbing.news/pro" target="_blank" style="color:#000099">euroclimbing.news/pro</a> to find out more.</p>
+      </div>
+
+    </div>
+    </div>
+  </div>
+</div>
+
+<!-- ROUND UP PANEL -->
+<div id="roundup-panel">
+  <div id="roundup-panel-header">
+    <div>
+      <div id="roundup-panel-title">Gym name</div>
+      <div id="roundup-panel-location"></div>
+    </div>
+    <button id="roundup-panel-close" onclick="closeRoundUpPanel()">✕</button>
+  </div>
+  <div id="roundup-panel-body">
+    <span id="roundup-status-badge"></span>
+    <div id="roundup-summary"></div>
+    <a id="roundup-article-link" href="#" target="_blank">📰 View source article →</a>
+    <div id="roundup-notice">
+      Recently reported by ECN. Data is unverified and subject to change.
+    </div>
+  </div>
+</div>
+
+<!-- LOADING OVERLAY -->
+<div id="loading-overlay">
+  <div id="loading-spinner"></div>
+  <div id="loading-msg">Loading gym data…</div>
+  <div id="loading-sub"></div>
+</div>
+
+<!-- HEADER -->
+<div id="header">
+  <h1>ECN <span>Gym Map</span></h1>
+  <div class="header-pill">UK &amp; Europe</div>
+  <div id="search-wrap">
+    <span id="search-icon">⌕</span>
+    <input id="gym-search" type="text" placeholder="Search gyms…" autocomplete="off">
+    <div id="search-results"></div>
+  </div>
+  <button id="guide-btn" onclick="toggleGuide()">? Guide</button>
+  <button id="add-gym-btn" onclick="toggleAddGym()">+ Add Gym</button>
+  <button id="fullscreen-btn" onclick="toggleFullscreen()"
+    title="Open in full screen">
+    <span class="icon-expand">⤢</span>
+    <span class="icon-shrink">⤡</span>
+  </button>
+</div>
+
+<!-- LAYERS PANEL REMOVED -->
+
+<!-- FILTER BAR -->
+<div id="filters">
+  <button class="filter-btn active" data-filter="all">All gyms</button>
+  <button class="filter-btn" data-filter="boulders">🪨 Bouldering</button>
+  <button class="filter-btn" data-filter="ropes">🧗 Ropes</button>
+  <button class="filter-btn" data-filter="autobelay">⚙️ Autobelay</button>
+  <button class="filter-btn" data-filter="cafe">☕ Café</button>
+  <button class="filter-btn" data-filter="moonboard">🌙 Moonboard</button>
+  <button class="filter-btn" data-filter="kilter">🟠 Kilter</button>
+  <button class="filter-btn" data-filter="tension">🔵 Tension</button>
+  <button class="filter-btn" data-filter="woody">🟤 Woody</button>
+  <button class="filter-btn" data-filter="kids">👶 Kids Zone</button>
+  <button class="filter-btn" data-filter="speed">⚡ Speed Wall</button>
+</div>
+
+<!-- MAP -->
+<div id="map"></div>
+<div id="gym-tooltip"></div>
+
+<!-- SIDEBAR PANEL -->
+<div id="panel">
+  <div id="panel-drag-handle"></div>
+  <button id="panel-close" onclick="closePanel()">✕</button>
+  <div id="panel-header">
+    <div id="panel-name">Gym Name</div>
+    <div id="panel-address">Address</div>
+    <div id="chain-badge-wrap" style="display:none">
+      <span id="chain-badge"></span>
+      <button id="chain-filter-btn" onclick="filterByChain()"></button>
+    </div>
+  </div>
+  <div id="panel-tabs">
+    <button class="panel-tab active" id="tab-info"   onclick="switchPanelTab('info')">📋 Info</button>
+    <button class="panel-tab"        id="tab-update" onclick="switchPanelTab('update')">✏️ Update Info</button>
+  </div>
+
+  <!-- INFO TAB -->
+  <div class="panel-tab-content active" id="tab-content-info">
+  <div id="panel-body">
+    <div id="panel-price"></div>
+    <div id="panel-links"></div>
+    <div class="transport-section">
+      <h4>Public Transport Nearby</h4>
+      <div id="panel-transport" class="transport-pills"></div>
+      <div id="transport-stops-status"></div>
+    </div>
+    <div class="amenity-grid" id="amenity-grid"></div>
+  </div>
+  </div>
+
+  <!-- UPDATE TAB -->
+  <div class="panel-tab-content" id="tab-content-update">
+  <div id="update-form">
+    <div id="update-status"></div>
+    <h4>Suggest a correction for <span id="update-gym-name" style="font-style:italic;text-transform:none;letter-spacing:0"></span></h4>
+
+    <div class="update-field">
+      <label>Name correction</label>
+      <input type="text" id="uf-name" placeholder="Corrected gym name…">
+    </div>
+    <div class="update-field">
+      <label>Address / location fix</label>
+      <input type="text" id="uf-address" placeholder="Corrected address…">
+    </div>
+    <div class="update-field">
+      <label>Website / contact update</label>
+      <input type="text" id="uf-website" placeholder="https://…">
+    </div>
+    <div class="update-field">
+      <label>Entry price update</label>
+      <input type="text" id="uf-price" placeholder="e.g. £12 day pass, £8 student…">
+    </div>
+    <div class="closed-row">
+      <input type="checkbox" id="uf-closed">
+      <label for="uf-closed">⚠️ Report this gym as permanently closed</label>
+    </div>
+    <div class="update-field">
+      <label>Other notes</label>
+      <textarea id="uf-notes" rows="3" placeholder="Anything else we should know…"></textarea>
+    </div>
+
+    <button id="update-submit" onclick="submitUpdate()">Send Update</button>
+    <p style="font-size:0.68rem;color:var(--stone);margin-top:12px;line-height:1.5;">
+      Updates are reviewed by the ECN team before any changes are made. Thank you for keeping the map accurate.
+    </p>
+  </div>
+  </div>
+</div>
+
+<!-- BOTTOM-LEFT: comparison tray stacked above legend -->
+
+<!-- COUNT -->
+<div id="count-badge"><span id="visible-count">314</span> gyms</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  CONFIG — update this URL when you change your Google Sheet
+// ═══════════════════════════════════════════════════════════════
+const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSwsrCp7nnygovZ1ZpsYbKjMZDyxBd3FLTPW2_nDWkLDqGfzVrqNoVjmErn1VkjrryYFvrjjNjHEejt/pub?gid=852920628&single=true&output=csv';
+
+// Round Up sheet — publish the "Round Up" tab as CSV and paste the URL here
+// File → Share → Publish to web → Round Up tab → CSV → copy URL
+const ROUNDUP_CSV_URL = ''; // ← paste Round Up tab CSV URL here when ready
+// How to get this URL:
+//   1. In Google Sheets: File → Share → Publish to web
+//   2. Select your sheet tab, choose "Comma-separated values (.csv)"
+//   3. Click Publish, copy the URL, paste it above.
+// ═══════════════════════════════════════════════════════════════
+
+const MAPBOX_TOKEN = 'pk.eyJ1IjoiZXVyb2NsaW1iaW5nbmV3cyIsImEiOiJjbWxrdmI3bm4wMHk3M2dzOWM2dmwzNm5hIn0.zqw4vH5VDALlkPZC9xY8HA';
+mapboxgl.accessToken = MAPBOX_TOKEN;
+
+// ── MAP INIT ──────────────────────────────────────────────
+const map = new mapboxgl.Map({
+  container: 'map',
+  style: 'mapbox://styles/mapbox/outdoors-v12',
+  center: [-2.5, 54.5],
+  zoom: 5.5,
+  minZoom: 4
+});
+map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
+
+// ── STATE ─────────────────────────────────────────────────
+let GYMS = null;
+let markers = [];
+let selectedMarker = null;
+let selectedGym = null;
+let selectedGymIdx = null;
+let activeFilter = 'all';
+let transportMarkers = [];
+
+// ── CSV PARSER ────────────────────────────────────────────
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+
+  // Auto-detect delimiter: tab or comma
+  const firstLine = lines[0];
+  const delimiter = firstLine.includes('\t') ? '\t' : ',';
+
+  // Parse a single line respecting quoted fields (comma mode only)
+  function parseLine(line) {
+    if (delimiter === '\t') return line.split('\t').map(v => v.trim().replace(/^"|"$/g, ''));
+    const row = [];
+    let current = '', inQuotes = false;
+    for (let c = 0; c < line.length; c++) {
+      const ch = line[c];
+      if (ch === '"') { inQuotes = !inQuotes; }
+      else if (ch === ',' && !inQuotes) { row.push(current.trim()); current = ''; }
+      else { current += ch; }
+    }
+    row.push(current.trim());
+    return row;
+  }
+
+  const headers = parseLine(firstLine).map(h => h.replace(/^"|"$/g, '').trim());
+  console.log('CSV headers detected:', headers);
+
+  const features = [];
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const row = parseLine(lines[i]);
+
+    const get = (colName) => {
+      const idx = headers.findIndex(h => h.toLowerCase().trim() === colName.toLowerCase().trim());
+      return idx >= 0 ? (row[idx] || '').trim() : '';
+    };
+
+    const lat = parseFloat(get('Latitude'));
+    const lng = parseFloat(get('Longitude'));
+    if (isNaN(lat) || isNaN(lng)) continue;
+
+    features.push({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [lng, lat] },
+      properties: {
+        name:      get('Name'),
+        address:   get('Address'),
+        website:   get('Website'),
+        phone:     get('Phone'),
+        cafe:      get('Café') || get('Cafe'),
+        ropes:     get('Ropes'),
+        autobelay: get('Autobelay'),
+        boulders:  get('Boulders'),
+        speed:     get('Speed'),
+        moonboard: get('Moon/Kilter/TB') || get('Moonboard'),
+        kilter:    get('Kilter'),
+        tension:   get('Tension'),
+        woody:     get('Woody'),
+        training:  get('Training Space'),
+        kids:      get('Kids Zone'),
+        retail:    get('Retail'),
+        transport: get('Public Transport'),
+        parking:   get('Parking'),
+        price:     get('Peak Entry Price'),
+        chain:     get('Chain'),
+      }
+    });
+  }
+  return { type: 'FeatureCollection', features };
+}
+
+// ── LOADING SCREEN ────────────────────────────────────────
+function showLoading(msg) {
+  document.getElementById('loading-overlay').style.display = 'flex';
+  document.getElementById('loading-msg').textContent = msg;
+}
+function hideLoading() {
+  document.getElementById('loading-overlay').style.display = 'none';
+}
+function showError(msg) {
+  document.getElementById('loading-overlay').style.display = 'flex';
+  document.getElementById('loading-spinner').style.display = 'none';
+  document.getElementById('loading-msg').textContent = msg;
+  document.getElementById('loading-sub').textContent = 'Check the SHEET_CSV_URL in the HTML config, then reload.';
+}
+
+// ── FETCH DATA ────────────────────────────────────────────
+async function loadGyms() {
+  showLoading('Loading gym data…');
+  try {
+    const resp = await fetch(SHEET_CSV_URL);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const text = await resp.text();
+    GYMS = parseCSV(text);
+    if (GYMS.features.length === 0) throw new Error('No gyms parsed — check column headers');
+    document.getElementById('visible-count').textContent = GYMS.features.length;
+    hideLoading();
+    // If map already loaded, build markers now; else wait for map load event
+    if (map.loaded()) buildMarkers();
+    // Load round up data independently
+    loadRoundUpData();
+  } catch (err) {
+    console.error('Failed to load gym data:', err);
+    showError(`⚠ Could not load gym data: ${err.message}`);
+  }
+}
+
+// ── RENDER MARKERS ────────────────────────────────────────
+function matchesFilter(props, filter) {
+  if (filter === 'all') return true;
+  if (filter === 'boulders') return props.boulders === 'Y';
+  if (filter === 'ropes')     return props.ropes     === 'Y';
+  if (filter === 'autobelay') return props.autobelay === 'Y' || props.ropes === 'AUTOBELAY';
+  if (filter === 'cafe') return props.cafe && props.cafe.toUpperCase() === 'Y';
+  if (filter === 'moonboard') return props.moonboard === 'Y';
+  if (filter === 'kilter')    return props.kilter    === 'Y';
+  if (filter === 'tension')   return props.tension   === 'Y';
+  if (filter === 'woody')     return props.woody     === 'Y';
+  if (filter === 'kids') return props.kids === 'Y';
+  if (filter === 'speed') return props.speed === 'Y';
+  return true;
+}
+
+function buildMarkers() {
+  if (!GYMS) return;
+  markers.forEach(m => m.marker.remove());
+  markers = [];
+  let count = 0;
+  GYMS.features.forEach((f, i) => {
+    const p = f.properties;
+    if (!matchesFilter(p, activeFilter)) return;
+    count++;
+    const el = document.createElement('div');
+    el.className = 'gym-marker';
+    el.dataset.idx = i;
+    const m = new mapboxgl.Marker({ element: el })
+      .setLngLat(f.geometry.coordinates)
+      .addTo(map);
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectGym(i, el);
+    });
+    const tooltip = document.getElementById('gym-tooltip');
+    el.addEventListener('mouseenter', (e) => {
+      tooltip.textContent = p.name;
+      tooltip.style.left = e.clientX + 'px';
+      tooltip.style.top  = e.clientY + 'px';
+      tooltip.classList.add('visible');
+    });
+    el.addEventListener('mousemove', (e) => {
+      tooltip.style.left = e.clientX + 'px';
+      tooltip.style.top  = e.clientY + 'px';
+    });
+    el.addEventListener('mouseleave', () => {
+      tooltip.classList.remove('visible');
+    });
+    markers.push({ marker: m, el, idx: i });
+  });
+  document.getElementById('visible-count').textContent = count;
+}
+
+// ── SELECT GYM ────────────────────────────────────────────
+function selectGym(idx, el) {
+  if (selectedMarker) selectedMarker.classList.remove('selected');
+  selectedMarker = el;
+  el.classList.add('selected');
+  selectedGym = GYMS.features[idx];
+  selectedGymIdx = idx;
+  clearTransportMarkers();
+  showPanel(selectedGym.properties, idx);
+  map.flyTo({ center: selectedGym.geometry.coordinates, zoom: Math.max(map.getZoom(), 13), duration: 800 });
+  const [lng, lat] = selectedGym.geometry.coordinates;
+  fetchTransportStops(lat, lng);
+}
+
+// ── PANEL ─────────────────────────────────────────────────
+function showPanel(p, idx) {
+  document.getElementById('panel-name').textContent = p.name;
+  document.getElementById('panel-address').textContent = p.address;
+  populateUpdateGymContext(p.name);
+
+  // Chain badge
+  const chainWrap = document.getElementById('chain-badge-wrap');
+  const chainBadge = document.getElementById('chain-badge');
+  const chainBtn   = document.getElementById('chain-filter-btn');
+  if (p.chain && p.chain.trim() !== '') {
+    const chainName = p.chain.trim();
+    const chainCount = GYMS.features.filter(f =>
+      f.properties.chain && f.properties.chain.trim() === chainName
+    ).length;
+    chainBadge.textContent = '🔗 ' + chainName;
+    chainBtn.textContent   = 'Show all ' + chainCount + ' location' + (chainCount !== 1 ? 's' : '');
+    chainBtn.dataset.chain = chainName;
+    chainWrap.style.display = 'flex';
+  } else {
+    chainWrap.style.display = 'none';
+    clearChainHighlight();
+  }
+
+  const priceEl = document.getElementById('panel-price');
+  priceEl.innerHTML = (p.price && p.price !== '')
+    ? `<div class="price-badge">Peak entry: £${parseFloat(p.price).toFixed(2)}</div>`
+    : `<div class="price-badge unknown">Price not listed</div>`;
+
+  const linksEl = document.getElementById('panel-links');
+  let linksHtml = '';
+  if (p.website) linksHtml += `<a href="${p.website}" class="panel-link" target="_blank" rel="noopener">🌐 Website</a>`;
+  if (p.phone)   linksHtml += `<a href="tel:${p.phone}" class="panel-link">📞 ${p.phone}</a>`;
+  linksEl.innerHTML = linksHtml;
+
+  const transEl = document.getElementById('panel-transport');
+  if (p.transport && p.transport !== 'NONE' && p.transport !== '') {
+    const modes = p.transport.split(',').map(t => t.trim()).filter(Boolean);
+    transEl.innerHTML = modes.map(m => `<span class="transport-pill">${transportLabel(m)}</span>`).join('');
+  } else {
+    transEl.innerHTML = `<span class="transport-pill">No public transport listed</span>`;
+  }
+  document.getElementById('transport-stops-status').textContent = '';
+
+  const amenities = [
+    { key: 'boulders',  label: '🪨 Bouldering' },
+    { key: 'ropes',     label: '🧗 Ropes' },
+    { key: 'autobelay', label: '⚙️ Autobelay' },
+    { key: 'cafe',      label: '☕ Café' },
+    { key: 'moonboard', label: '🌙 Moonboard' },
+    { key: 'kilter',    label: '🟠 Kilter Board' },
+    { key: 'tension',   label: '🔵 Tension Board' },
+    { key: 'woody',     label: '🟤 Woody Board' },
+    { key: 'training',  label: '💪 Training Space' },
+    { key: 'kids',      label: '👶 Kids Zone' },
+    { key: 'speed',     label: '⚡ Speed Wall' },
+    { key: 'retail',    label: '🛍️ Retail' },
+    { key: 'parking',   label: '🅿️ Parking' },
+  ];
+  document.getElementById('amenity-grid').innerHTML = amenities
+    .filter(a => p[a.key] === 'Y' || p[a.key] === 'AUTOBELAY')
+    .map(a => `<div class="tag yes">✓ ${a.label}</div>`)
+    .join('') || '<div style="font-size:0.78rem;color:var(--stone)">No amenity data available</div>';
+
+  document.getElementById('panel').classList.add('open');
+  document.body.classList.add('panel-open-mobile');
+}
+
+function transportLabel(mode) {
+  const icons = { BUS:'🚌 Bus', TRAIN:'🚂 Train', TRAM:'🚃 Tram',
+    UNDERGROUND:'🚇 Underground', METRO:'🚇 Metro', FERRY:'⛴️ Ferry', TRAM_TRAIN:'🚈 Tram-Train' };
+  return icons[mode.toUpperCase()] || mode;
+}
+
+function closePanel() {
+  document.getElementById('panel').classList.remove('open');
+  document.body.classList.remove('panel-open-mobile');
+  if (selectedMarker) selectedMarker.classList.remove('selected');
+  selectedMarker = null;
+  selectedGym = null;
+  selectedGymIdx = null;
+  clearTransportMarkers();
+  clearChainHighlight();
+}
+
+// ── CHAIN HIGHLIGHTING ────────────────────────────────────────────
+let chainHighlightActive = false;
+
+function filterByChain() {
+  const chainName = document.getElementById('chain-filter-btn').dataset.chain;
+  if (!chainName) return;
+
+  chainHighlightActive = true;
+
+  // Dim all markers then highlight chain members
+  document.querySelectorAll('.gym-marker').forEach((el, i) => {
+    const props = GYMS.features[i] && GYMS.features[i].properties;
+    if (!props) return;
+    const inChain = props.chain && props.chain.trim() === chainName;
+    el.classList.toggle('chain-dim',       !inChain);
+    el.classList.toggle('chain-highlight',  inChain);
+  });
+
+  // Fit map to show all chain gyms
+  const chainGyms = GYMS.features.filter(f =>
+    f.properties.chain && f.properties.chain.trim() === chainName
+  );
+  if (chainGyms.length > 1) {
+    const coords = chainGyms.map(f => f.geometry.coordinates);
+    const bounds = coords.reduce(
+      (b, c) => b.extend(c),
+      new mapboxgl.LngLatBounds(coords[0], coords[0])
+    );
+    map.fitBounds(bounds, { padding: 80, maxZoom: 12, duration: 800 });
+  }
+
+  // Update button to allow clearing
+  const btn = document.getElementById('chain-filter-btn');
+  btn.textContent = '✕ Clear chain view';
+  btn.onclick = clearChainHighlight;
+}
+
+function clearChainHighlight() {
+  if (!chainHighlightActive) return;
+  chainHighlightActive = false;
+  document.querySelectorAll('.gym-marker').forEach(el => {
+    el.classList.remove('chain-dim', 'chain-highlight');
+  });
+  const btn = document.getElementById('chain-filter-btn');
+  if (btn) {
+    const chainName = document.getElementById('chain-badge-wrap').dataset && btn.dataset.chain;
+    const chainCount = chainName ? GYMS.features.filter(f =>
+      f.properties.chain && f.properties.chain.trim() === chainName
+    ).length : 0;
+    btn.textContent = 'Show all ' + chainCount + ' location' + (chainCount !== 1 ? 's' : '');
+    btn.onclick = filterByChain;
+  }
+}
+
+// ── MAP CLICK HANDLER ─────────────────────────────────────────────
+map.on('click', e => {
+  const clickedMarker = e.originalEvent.target.closest('.gym-marker, .roundup-marker');
+  if (clickedMarker) return;
+  document.getElementById('panel').classList.remove('open');
+  document.body.classList.remove('panel-open-mobile');
+  document.getElementById('roundup-panel').classList.remove('open');
+  clearTransportMarkers();
+});
+
+loadGyms();
+
+</script>
+</body>
+</html>
