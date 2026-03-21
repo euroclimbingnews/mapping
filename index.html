@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECN Climbing Maps</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy:   #000099;
+    --navy-dk:#00006a;
+    --orange: #e8621a;
+    --cream:  #f5f2ec;
+    --warm:   #ede8de;
+    --stone:  #7a7060;
+    --dark:   #1a1a2e;
+    --white:  #ffffff;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--cream);
+    color: var(--dark);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    overflow-x: hidden;
+  }
+
+  /* ── HEADER ─────────────────────────────────────────── */
+  header {
+    background: var(--navy);
+    padding: 0 40px;
+    height: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 2px 20px rgba(0,0,60,0.25);
+  }
+  .header-logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem;
+    color: var(--white);
+    letter-spacing: 0.02em;
+    text-decoration: none;
+  }
+  .header-logo span { color: rgba(255,255,255,0.5); }
+  .header-link {
+    font-size: 0.78rem;
+    font-weight: 400;
+    color: rgba(255,255,255,0.65);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .header-link:hover { color: var(--white); }
+
+  /* ── HERO ───────────────────────────────────────────── */
+  .hero {
+    background: var(--navy);
+    padding: 80px 40px 90px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -2px; left: 0; right: 0;
+    height: 60px;
+    background: var(--cream);
+    clip-path: ellipse(55% 100% at 50% 100%);
+  }
+  .hero-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+  .hero-eyebrow {
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.45);
+    margin-bottom: 18px;
+  }
+  .hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.4rem, 6vw, 4.2rem);
+    font-weight: 900;
+    color: var(--white);
+    line-height: 1.08;
+    margin-bottom: 24px;
+  }
+  .hero h1 em {
+    font-style: italic;
+    color: rgba(255,255,255,0.55);
+  }
+  .hero-sub {
+    font-size: 1.05rem;
+    font-weight: 300;
+    color: rgba(255,255,255,0.65);
+    max-width: 540px;
+    line-height: 1.7;
+  }
+
+  /* ── CARDS ──────────────────────────────────────────── */
+  .cards-section {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 70px 40px 80px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+  }
+
+  .card {
+    background: var(--white);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 30px rgba(0,0,60,0.08);
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    text-decoration: none;
+    color: inherit;
+  }
+  .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 50px rgba(0,0,60,0.14);
+  }
+
+  .card-band {
+    height: 7px;
+  }
+  .card-band.free { background: var(--stone); }
+  .card-band.pro  { background: var(--navy); }
+
+  .card-body {
+    padding: 32px 30px 28px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .card-tier {
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .card-tier.free { color: var(--stone); }
+  .card-tier.pro  { color: var(--navy); }
+
+  .card h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.55rem;
+    font-weight: 700;
+    color: var(--dark);
+    line-height: 1.2;
+    margin-bottom: 14px;
+  }
+
+  .card-desc {
+    font-size: 0.88rem;
+    color: var(--stone);
+    line-height: 1.7;
+    flex: 1;
+    margin-bottom: 28px;
+  }
+
+  .card-features {
+    list-style: none;
+    margin-bottom: 30px;
+  }
+  .card-features li {
+    font-size: 0.82rem;
+    color: var(--dark);
+    padding: 7px 0;
+    border-bottom: 1px solid var(--warm);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .card-features li:last-child { border-bottom: none; }
+  .card-features .tick {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.65rem;
+    flex-shrink: 0;
+  }
+  .card.free-card .tick { background: #f0f0ec; color: var(--stone); }
+  .card.pro-card  .tick { background: #e8eeff; color: var(--navy); }
+
+  .card-cta {
+    display: block;
+    text-align: center;
+    padding: 13px 24px;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s;
+    letter-spacing: 0.02em;
+  }
+  .card.free-card .card-cta {
+    background: var(--warm);
+    color: var(--dark);
+    border: 1.5px solid rgba(0,0,0,0.1);
+  }
+  .card.free-card .card-cta:hover {
+    background: #e0dbd0;
+  }
+  .card.pro-card .card-cta {
+    background: var(--navy);
+    color: var(--white);
+  }
+  .card.pro-card .card-cta:hover {
+    background: var(--navy-dk);
+  }
+
+  /* ── PRO NOTE ───────────────────────────────────────── */
+  .pro-note {
+    max-width: 900px;
+    margin: 0 auto 70px;
+    padding: 0 40px;
+  }
+  .pro-note-inner {
+    background: var(--navy);
+    border-radius: 12px;
+    padding: 28px 32px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+  .pro-note-icon {
+    font-size: 1.8rem;
+    flex-shrink: 0;
+  }
+  .pro-note h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.05rem;
+    color: var(--white);
+    margin-bottom: 5px;
+  }
+  .pro-note p {
+    font-size: 0.83rem;
+    color: rgba(255,255,255,0.6);
+    line-height: 1.6;
+  }
+  .pro-note a {
+    color: rgba(255,255,255,0.9);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* ── FOOTER ─────────────────────────────────────────── */
+  footer {
+    background: var(--dark);
+    padding: 28px 40px;
+    text-align: center;
+  }
+  footer p {
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.35);
+    line-height: 1.8;
+  }
+  footer a {
+    color: rgba(255,255,255,0.55);
+    text-decoration: none;
+  }
+  footer a:hover { color: var(--white); }
+
+  /* ── RESPONSIVE ─────────────────────────────────────── */
+  @media (max-width: 660px) {
+    header { padding: 0 20px; }
+    .hero { padding: 52px 24px 70px; }
+    .cards-section {
+      grid-template-columns: 1fr;
+      padding: 48px 20px 52px;
+      gap: 20px;
+    }
+    .pro-note { padding: 0 20px; margin-bottom: 48px; }
+    .pro-note-inner { flex-direction: column; gap: 14px; padding: 22px 22px; }
+    footer { padding: 24px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="header-logo" href="https://euroclimbing.news">ECN <span>/ Euro Climbing News</span></a>
+  <a class="header-link" href="https://euroclimbing.news" target="_blank">euroclimbing.news ↗</a>
+</header>
+
+<section class="hero">
+  <div class="hero-inner">
+    <p class="hero-eyebrow">Euro Climbing News</p>
+    <h1>Climbing gym maps<br><em>for every need</em></h1>
+    <p class="hero-sub">Free gym directory for the climbing community. Site intelligence tools for operators, developers and investors.</p>
+  </div>
+</section>
+
+<section class="cards-section">
+
+  <!-- FREE MAP -->
+  <a class="card free-card" href="./climbing-map-free.html">
+    <div class="card-band free"></div>
+    <div class="card-body">
+      <p class="card-tier free">Free</p>
+      <h2>ECN Gym Map</h2>
+      <p class="card-desc">A free, publicly accessible directory of 343 climbing facilities across the UK, Ireland and Europe.</p>
+      <ul class="card-features">
+        <li><span class="tick">✓</span> 343 mapped facilities</li>
+        <li><span class="tick">✓</span> Gym profiles & amenities</li>
+        <li><span class="tick">✓</span> Search & filter by facility type</li>
+        <li><span class="tick">✓</span> Chain gym highlighting</li>
+        <li><span class="tick">✓</span> Submit corrections & additions</li>
+      </ul>
+      <span class="card-cta">Open free map →</span>
+    </div>
+  </a>
+
+  <!-- PRO MAP -->
+  <a class="card pro-card" href="https://euroclimbing.news/pro">
+    <div class="card-band pro"></div>
+    <div class="card-body">
+      <p class="card-tier pro">ECN Pro</p>
+      <h2>Site Intelligence Platform</h2>
+      <p class="card-desc">Census-grade population data, catchment analysis and competitor mapping — built for industry professionals.</p>
+      <ul class="card-features">
+        <li><span class="tick">✓</span> Everything in the free map</li>
+        <li><span class="tick">✓</span> Population density overlay</li>
+        <li><span class="tick">✓</span> Walk / cycle / drive catchment zones</li>
+        <li><span class="tick">✓</span> Location analysis for any point</li>
+        <li><span class="tick">✓</span> Youth demographic & deprivation layers</li>
+      </ul>
+      <span class="card-cta">Learn about ECN Pro →</span>
+    </div>
+  </a>
+
+</section>
+
+<div class="pro-note">
+  <div class="pro-note-inner">
+    <div class="pro-note-icon">🔒</div>
+    <div>
+      <h3>ECN Pro subscribers</h3>
+      <p>Access to the full site intelligence map is available through your ECN Pro subscription at <a href="https://euroclimbing.news/pro" target="_blank">euroclimbing.news/pro</a>. Direct access to the map file is restricted to subscribers only.</p>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <p>
+    <a href="https://euroclimbing.news" target="_blank">euroclimbing.news</a> &nbsp;·&nbsp;
+    <a href="mailto:callum@euroclimbing.news">callum@euroclimbing.news</a> &nbsp;·&nbsp;
+    <a href="https://instagram.com/euroclimbingnews" target="_blank">@euroclimbingnews</a>
+  </p>
+  <p style="margin-top:6px">© Euro Climbing News 2025. All rights reserved.</p>
+</footer>
+
+</body>
+</html>
