@@ -825,24 +825,6 @@
   </div>
 </div>
 
-<!-- ROUND UP PANEL -->
-<div id="roundup-panel">
-  <div id="roundup-panel-header">
-    <div>
-      <div id="roundup-panel-title">Gym name</div>
-      <div id="roundup-panel-location"></div>
-    </div>
-    <button id="roundup-panel-close" onclick="closeRoundUpPanel()">✕</button>
-  </div>
-  <div id="roundup-panel-body">
-    <span id="roundup-status-badge"></span>
-    <div id="roundup-summary"></div>
-    <a id="roundup-article-link" href="#" target="_blank">📰 View source article →</a>
-    <div id="roundup-notice">
-      Recently reported by ECN. Data is unverified and subject to change.
-    </div>
-  </div>
-</div>
 
 <!-- LOADING OVERLAY -->
 <div id="loading-overlay">
@@ -971,9 +953,7 @@
 // ═══════════════════════════════════════════════════════════════
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSwsrCp7nnygovZ1ZpsYbKjMZDyxBd3FLTPW2_nDWkLDqGfzVrqNoVjmErn1VkjrryYFvrjjNjHEejt/pub?gid=852920628&single=true&output=csv';
 
-// Round Up sheet — publish the "Round Up" tab as CSV and paste the URL here
-// File → Share → Publish to web → Round Up tab → CSV → copy URL
-const ROUNDUP_CSV_URL = ''; // ← paste Round Up tab CSV URL here when ready
+// ── CONFIG ──────────────────────────────────────────────────────
 // How to get this URL:
 //   1. In Google Sheets: File → Share → Publish to web
 //   2. Select your sheet tab, choose "Comma-separated values (.csv)"
@@ -1100,8 +1080,6 @@ async function loadGyms() {
     hideLoading();
     // If map already loaded, build markers now; else wait for map load event
     if (map.loaded()) buildMarkers();
-    // Load round up data independently
-    loadRoundUpData();
   } catch (err) {
     console.error('Failed to load gym data:', err);
     showError(`⚠ Could not load gym data: ${err.message}`);
@@ -1317,11 +1295,10 @@ function clearChainHighlight() {
 
 // ── MAP CLICK HANDLER ─────────────────────────────────────────────
 map.on('click', e => {
-  const clickedMarker = e.originalEvent.target.closest('.gym-marker, .roundup-marker');
+  const clickedMarker = e.originalEvent.target.closest('.gym-marker');
   if (clickedMarker) return;
   document.getElementById('panel').classList.remove('open');
   document.body.classList.remove('panel-open-mobile');
-  document.getElementById('roundup-panel').classList.remove('open');
   clearTransportMarkers();
 });
 
