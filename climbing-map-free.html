@@ -1086,10 +1086,15 @@ async function loadGyms() {
     const text = await resp.text();
     GYMS = parseCSV(text);
     if (GYMS.features.length === 0) throw new Error('No gyms parsed — check column headers');
+    console.log('GYMS loaded:', GYMS.features.length, '| map.loaded():', map.loaded());
     document.getElementById('visible-count').textContent = GYMS.features.length;
     hideLoading();
-    // If map already loaded, build markers now; else wait for map load event
-    if (map.loaded()) buildMarkers();
+    if (map.loaded()) {
+      console.log('Building markers immediately');
+      buildMarkers();
+    } else {
+      console.log('Map not ready yet — waiting for load event');
+    }
   } catch (err) {
     console.error('Failed to load gym data:', err);
     showError(`⚠ Could not load gym data: ${err.message}`);
@@ -1114,6 +1119,7 @@ function matchesFilter(props, filter) {
 
 function buildMarkers() {
   if (!GYMS) return;
+  console.log('buildMarkers called, features:', GYMS.features.length);
   markers.forEach(m => m.marker.remove());
   markers = [];
   let count = 0;
@@ -1494,6 +1500,7 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
 // ── MAP LOAD EVENT ────────────────────────────────────────────────
 // If gym data loaded before map, build markers now
 map.on('load', () => {
+  console.log('Map load event fired | GYMS:', GYMS ? GYMS.features.length : 'null');
   if (GYMS) buildMarkers();
 });
 
