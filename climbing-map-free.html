@@ -1153,6 +1153,7 @@ function buildMarkers() {
     });
     markers.push({ marker: m, el, idx: i });
   });
+  console.log('buildMarkers complete, count:', count, 'markers array:', markers.length);
   document.getElementById('visible-count').textContent = count;
 }
 
