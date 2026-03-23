@@ -397,28 +397,27 @@
   /* Chain-mode: hide non-chain markers, highlight chain in navy */
   /* ── COUNT BADGE ─────────────────────────────────────── */
   #count-badge {
-    position: fixed; bottom: 32px; right: 16px;
-    background: var(--white); border-radius: 12px;
-    padding: 8px 16px; z-index: 10;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
-    font-size: 0.78rem; color: var(--stone);
-    font-family: 'DM Sans', sans-serif;
-    pointer-events: none;
+    position: fixed; bottom: 28px; right: 60px; z-index: 50;
+    background: var(--forest); color: var(--cream);
+    border-radius: var(--radius); padding: 10px 16px;
+    font-size: 0.78rem; font-weight: 500;
+    box-shadow: var(--shadow);
   }
-  #count-badge span {
-    font-size: 1.05rem; font-weight: 700;
-    color: var(--forest); margin-right: 3px;
-  }
+  #count-badge span { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 700; }
 
   /* ── GYM TOOLTIP ─────────────────────────────────────── */
   #gym-tooltip {
-    position: fixed; z-index: 200;
-    background: var(--dark); color: var(--white);
-    padding: 5px 10px; border-radius: 6px;
-    font-size: 0.78rem; font-family: 'DM Sans', sans-serif;
-    pointer-events: none; white-space: nowrap;
-    opacity: 0; transition: opacity 0.1s;
-    transform: translate(12px, -50%);
+    position: fixed; z-index: 9999;
+    background: var(--forest);
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem; font-weight: 500;
+    padding: 5px 10px; border-radius: 7px;
+    pointer-events: none;
+    white-space: nowrap;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.28);
+    opacity: 0; transition: opacity 0.12s;
+    transform: translate(-50%, calc(-100% - 10px));
   }
   #gym-tooltip.visible { opacity: 1; }
 
