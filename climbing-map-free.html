@@ -983,6 +983,15 @@ let selectedGymIdx = null;
 let activeFilter = 'all';
 let transportMarkers = [];
 
+function clearTransportMarkers() {
+  transportMarkers.forEach(m => m.remove());
+  transportMarkers = [];
+  const el = document.getElementById('panel-transport');
+  if (el) el.innerHTML = '';
+  const status = document.getElementById('transport-stops-status');
+  if (status) status.textContent = '';
+}
+
 // ── CSV PARSER ────────────────────────────────────────────
 function parseCSV(text) {
   const lines = text.trim().split('\n');
@@ -1367,6 +1376,105 @@ function showAddGymStatus(type, msg) {
   el.className = type;
   el.textContent = msg;
 }
+
+// ── PANEL TABS ────────────────────────────────────────────────────
+function switchPanelTab(tab) {
+  document.querySelectorAll('.panel-tab').forEach(el =>
+    el.classList.toggle('active', el.id === `tab-${tab}`));
+  document.querySelectorAll('.panel-tab-content').forEach(el =>
+    el.classList.toggle('active', el.id === `tab-content-${tab}`));
+}
+
+// ── UPDATE FORM ───────────────────────────────────────────────────
+function populateUpdateGymContext(name) {
+  document.getElementById('update-gym-name').textContent = name;
+  ['uf-name','uf-address','uf-website','uf-price','uf-notes'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const cb = document.getElementById('uf-closed');
+  if (cb) cb.checked = false;
+  const status = document.getElementById('update-status');
+  if (status) { status.className = ''; status.textContent = ''; }
+  const btn = document.getElementById('update-submit');
+  if (btn) { btn.disabled = false; btn.textContent = 'Send Update'; }
+}
+
+async function submitUpdate() {
+  const gymName   = document.getElementById('update-gym-name').textContent;
+  const nameCorr  = document.getElementById('uf-name').value.trim();
+  const addrCorr  = document.getElementById('uf-address').value.trim();
+  const webCorr   = document.getElementById('uf-website').value.trim();
+  const priceCorr = document.getElementById('uf-price').value.trim();
+  const isClosed  = document.getElementById('uf-closed').checked;
+  const notes     = document.getElementById('uf-notes').value.trim();
+  if (!nameCorr && !addrCorr && !webCorr && !priceCorr && !isClosed && !notes) {
+    showUpdateStatus('error', 'Please fill in at least one field before submitting.');
+    return;
+  }
+  const btn = document.getElementById('update-submit');
+  btn.disabled = true; btn.textContent = 'Sending...';
+  const payload = new URLSearchParams({
+    timestamp: new Date().toISOString(),
+    gym: gymName, name_corr: nameCorr, addr_corr: addrCorr,
+    web_corr: webCorr, price_corr: priceCorr,
+    closed: isClosed ? 'YES' : '', notes
+  });
+  try {
+    await fetch(UPDATE_SHEET_URL, { method: 'POST', mode: 'no-cors', redirect: 'follow', body: payload });
+    showUpdateStatus('success', 'Update received - thank you! The ECN team will review it shortly.');
+    btn.textContent = 'Sent';
+    document.getElementById('panel-body').scrollTop = 0;
+  } catch(e) {
+    showUpdateStatus('error', 'Something went wrong. Please try again.');
+    btn.disabled = false; btn.textContent = 'Send Update';
+  }
+}
+
+function showUpdateStatus(type, msg) {
+  const el = document.getElementById('update-status');
+  el.className = type; el.textContent = msg;
+}
+
+// ── TRANSPORT STOPS ───────────────────────────────────────────────
+async function fetchTransportStops(lat, lng) {
+  const statusEl = document.getElementById('transport-stops-status');
+  const pillsEl  = document.getElementById('panel-transport');
+  if (statusEl) statusEl.textContent = 'Loading nearby stops...';
+  const query = `[out:json][timeout:15];(node["highway"="bus_stop"](around:600,${lat},${lng});node["railway"="station"](around:600,${lat},${lng});node["railway"="halt"](around:600,${lat},${lng});node["railway"="tram_stop"](around:600,${lat},${lng});node["station"="subway"](around:600,${lat},${lng}););out body;`;
+  try {
+    const resp = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(query) });
+    const data = await resp.json();
+    if (!data.elements || data.elements.length === 0) {
+      if (statusEl) statusEl.textContent = 'No stops within 600m.'; return;
+    }
+    const seen = new Set(); let count = 0;
+    const typeCounts = { rail: 0, tram: 0, bus: 0 };
+    data.elements.forEach(el => {
+      const icon = getTransportIcon(el.tags);
+      const name = el.tags.name || '';
+      const key = icon + '-' + name;
+      if (seen.has(key) && name) return;
+      seen.add(key);
+      if (['\u{1F682}','\u{1F687}','\u{1F688}'].includes(icon)) typeCounts.rail++;
+      else if (icon === '\u{1F683}') typeCounts.tram++;
+      else typeCounts.bus++;
+      count++;
+      const div = document.createElement('div');
+      div.className = 'transport-marker'; div.textContent = icon; div.title = name || icon;
+      const m = new mapboxgl.Marker({ element: div, anchor: 'center' }).setLngLat([el.lon, el.lat]).addTo(map);
+      transportMarkers.push(m);
+    });
+    const parts = [];
+    if (typeCounts.rail > 0) parts.push(typeCounts.rail + ' rail');
+    if (typeCounts.tram > 0) parts.push(typeCounts.tram + ' tram');
+    if (typeCounts.bus  > 0) parts.push(typeCounts.bus + ' bus');
+    if (pillsEl) pillsEl.innerHTML = '<span class="transport-pill"> ' + count + ' stop' + (count !== 1 ? 's' : '') + ' within 600m</span>';
+    if (statusEl) statusEl.textContent = parts.join(' - ');
+  } catch(e) { if (statusEl) statusEl.textContent = 'Could not load stops.'; }
+}
+
+function toggleFullscreen() {}
 
 // ── FILTER BUTTONS ────────────────────────────────────────────────
 document.querySelectorAll('.filter-btn').forEach(btn => {
