@@ -952,6 +952,7 @@
 //  CONFIG — update this URL when you change your Google Sheet
 // ═══════════════════════════════════════════════════════════════
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSwsrCp7nnygovZ1ZpsYbKjMZDyxBd3FLTPW2_nDWkLDqGfzVrqNoVjmErn1VkjrryYFvrjjNjHEejt/pub?gid=852920628&single=true&output=csv';
+const UPDATE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbyc_uYxrwshIsL1Bs3s7G4cpAbezfU-gqnwZe3aDjX9rt6qOIi2cuTe83hLLEntKMGs/exec';
 
 // ── CONFIG ──────────────────────────────────────────────────────
 // How to get this URL:
@@ -1300,6 +1301,132 @@ map.on('click', e => {
   document.getElementById('panel').classList.remove('open');
   document.body.classList.remove('panel-open-mobile');
   clearTransportMarkers();
+});
+
+// ── USER GUIDE ────────────────────────────────────────────────────
+function toggleGuide() {
+  document.getElementById('guide-overlay').classList.toggle('open');
+}
+function handleGuideOverlayClick(e) {
+  if (e.target === document.getElementById('guide-overlay')) toggleGuide();
+}
+
+// ── ADD GYM ───────────────────────────────────────────────────────
+function toggleAddGym() {
+  document.getElementById('add-gym-overlay').classList.toggle('open');
+}
+function handleAddGymOverlayClick(e) {
+  if (e.target === document.getElementById('add-gym-overlay')) toggleAddGym();
+}
+
+document.querySelectorAll('#ag-facilities .add-gym-check').forEach(label => {
+  label.addEventListener('click', () => {
+    const cb = label.querySelector('input');
+    setTimeout(() => label.classList.toggle('checked', cb.checked), 0);
+  });
+});
+
+async function submitAddGym() {
+  const name    = document.getElementById('ag-name').value.trim();
+  const address = document.getElementById('ag-address').value.trim();
+  if (!name || !address) {
+    showAddGymStatus('error', 'Please fill in at least the gym name and address.');
+    return;
+  }
+  const facilities = [...document.querySelectorAll('#ag-facilities input:checked')]
+    .map(cb => cb.value).join(', ');
+  const payload = new URLSearchParams({
+    timestamp: new Date().toISOString(),
+    type:      'NEW_GYM',
+    name, address,
+    website:   document.getElementById('ag-website').value.trim(),
+    phone:     document.getElementById('ag-phone').value.trim(),
+    price:     document.getElementById('ag-price').value.trim(),
+    gym_type:  document.getElementById('ag-type').value,
+    facilities,
+    notes:     document.getElementById('ag-notes').value.trim(),
+    submitter: document.getElementById('ag-submitter').value.trim(),
+  });
+  const btn = document.getElementById('add-gym-submit');
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+  try {
+    await fetch(UPDATE_SHEET_URL, { method: 'POST', mode: 'no-cors', redirect: 'follow', body: payload });
+    showAddGymStatus('success', '✓ Thank you! Your submission has been received and will be reviewed by the ECN team.');
+    btn.textContent = 'Submitted';
+    document.getElementById('add-gym-form-body').scrollTop = 0;
+  } catch(e) {
+    showAddGymStatus('error', 'Something went wrong. Please try again or email callum@euroclimbing.news');
+    btn.disabled = false;
+    btn.textContent = 'Submit for Review';
+  }
+}
+
+function showAddGymStatus(type, msg) {
+  const el = document.getElementById('add-gym-status');
+  el.className = type;
+  el.textContent = msg;
+}
+
+// ── FILTER BUTTONS ────────────────────────────────────────────────
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter = btn.dataset.filter;
+    buildMarkers();
+    if (activeFilter !== 'all') {
+      document.getElementById('panel').classList.remove('open');
+      document.body.classList.remove('panel-open-mobile');
+      clearTransportMarkers();
+    }
+  });
+});
+
+// ── MAP LOAD EVENT ────────────────────────────────────────────────
+// If gym data loaded before map, build markers now
+map.on('load', () => {
+  if (GYMS) buildMarkers();
+});
+
+// ── SEARCH ────────────────────────────────────────────────────────
+const searchInput = document.getElementById('gym-search');
+const searchResults = document.getElementById('search-results');
+
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.trim().toLowerCase();
+  if (!q || !GYMS) { searchResults.innerHTML = ''; searchResults.classList.remove('open'); return; }
+  const matches = GYMS.features
+    .filter(f => f.properties.name && f.properties.name.toLowerCase().includes(q))
+    .slice(0, 8);
+  if (matches.length === 0) { searchResults.innerHTML = ''; searchResults.classList.remove('open'); return; }
+  searchResults.innerHTML = matches.map((f, i) => {
+    const idx = GYMS.features.indexOf(f);
+    return `<div class="search-item" data-idx="${idx}">
+      <strong>${f.properties.name}</strong>
+      <span>${f.properties.address || ''}</span>
+    </div>`;
+  }).join('');
+  searchResults.classList.add('open');
+});
+
+searchResults.addEventListener('click', e => {
+  const item = e.target.closest('.search-item');
+  if (!item) return;
+  const idx = parseInt(item.dataset.idx);
+  const gym = GYMS.features[idx];
+  searchInput.value = gym.properties.name;
+  searchResults.innerHTML = '';
+  searchResults.classList.remove('open');
+  map.flyTo({ center: gym.geometry.coordinates, zoom: 14, duration: 800 });
+  const markers = document.querySelectorAll('.gym-marker');
+  if (markers[idx]) selectGym(idx, markers[idx]);
+});
+
+document.addEventListener('click', e => {
+  if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+    searchResults.classList.remove('open');
+  }
 });
 
 loadGyms();
