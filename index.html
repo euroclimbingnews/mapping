@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ECN Climbing Maps</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans+Condensed:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -24,7 +24,7 @@
     height: 100%;
     background: var(--cream);
     color: var(--dark);
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Open Sans Condensed', sans-serif;
     font-weight: 300;
     overflow-x: hidden;
   }
@@ -43,7 +43,7 @@
     box-shadow: 0 2px 20px rgba(0,0,60,0.25);
   }
   .header-logo {
-    font-family: 'Playfair Display', serif;
+    font-family: 'Open Sans Condensed', sans-serif;
     font-size: 1.1rem;
     color: var(--white);
     letter-spacing: 0.02em;
@@ -79,6 +79,24 @@
     margin: 0 auto;
     position: relative;
     z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 40px;
+  }
+  .hero-text { flex: 1; }
+  .hero-logo {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+  }
+  .hero-logo img {
+    height: clamp(120px, 16vw, 210px);
+    width: auto;
+    display: block;
+  }
+  @media (max-width: 660px) {
+    .hero-logo img { height: 90px; }
   }
   .hero-eyebrow {
     font-size: 0.72rem;
@@ -89,7 +107,7 @@
     margin-bottom: 18px;
   }
   .hero h1 {
-    font-family: 'Playfair Display', serif;
+    font-family: 'Open Sans Condensed', sans-serif;
     font-size: clamp(2.4rem, 6vw, 4.2rem);
     font-weight: 900;
     color: var(--white);
@@ -158,7 +176,7 @@
   .card-tier.pro  { color: var(--navy); }
 
   .card h2 {
-    font-family: 'Playfair Display', serif;
+    font-family: 'Open Sans Condensed', sans-serif;
     font-size: 1.55rem;
     font-weight: 700;
     color: var(--dark);
@@ -244,7 +262,7 @@
     flex-shrink: 0;
   }
   .pro-note h3 {
-    font-family: 'Playfair Display', serif;
+    font-family: 'Open Sans Condensed', sans-serif;
     font-size: 1.05rem;
     color: var(--white);
     margin-bottom: 5px;
@@ -301,9 +319,14 @@
 
 <section class="hero">
   <div class="hero-inner">
-    <p class="hero-eyebrow">Euro Climbing News</p>
-    <h1>Climbing gym maps<br><em>for every need</em></h1>
-    <p class="hero-sub">Free gym directory for the climbing community. Site intelligence tools for operators, developers and investors.</p>
+    <div class="hero-text">
+      <p class="hero-eyebrow">Euro Climbing News</p>
+      <h1>Climbing gym maps<br><em>for every need</em></h1>
+      <p class="hero-sub">Free gym directory for the climbing community. Site intelligence tools for operators, developers and investors.</p>
+    </div>
+    <div class="hero-logo">
+      <img src="./ECN_Pro_Logo.png" alt="ECN Pro">
+    </div>
   </div>
 </section>
 
