@@ -632,12 +632,12 @@
     }
     #search-results { max-height: 200px; }
 
-    /* Map: starts below taller header (≈ 94px) + filter bar (≈ 46px) */
-    #map { top: 140px; }
+    /* Map: starts below taller header (≈ 110px) + filter bar (≈ 46px) */
+    #map { top: 156px; }
 
     /* Filter bar: full-width horizontal scroll strip */
     #filters {
-      top: 94px;
+      top: 110px;
       left: 0; right: 0;
       transform: none;
       border-radius: 0;
@@ -770,7 +770,6 @@
       <div class="add-gym-section-label">Facilities</div>
       <div class="add-gym-checkboxes" id="ag-facilities">
         <label class="add-gym-check"><input type="checkbox" value="Bouldering">🪨 Bouldering</label>
-        <label class="add-gym-check"><input type="checkbox" value="Ropes">🧗 Ropes</label>
         <label class="add-gym-check"><input type="checkbox" value="Ropes">🧗 Ropes</label>
         <label class="add-gym-check"><input type="checkbox" value="Autobelay">⚙️ Autobelay</label>
         <label class="add-gym-check"><input type="checkbox" value="Café">☕ Café</label>
@@ -1280,6 +1279,34 @@ function transportLabel(mode) {
   return icons[mode.toUpperCase()] || mode;
 }
 
+// ── MOBILE PANEL SWIPE TO DISMISS ────────────────────────────────
+(function() {
+  function addSwipeDismiss(handleEl, panelEl, onDismiss) {
+    let startY = 0, startTime = 0;
+    handleEl.addEventListener('touchstart', e => {
+      startY    = e.touches[0].clientY;
+      startTime = Date.now();
+      panelEl.style.transition = 'none';
+    }, { passive: true });
+    handleEl.addEventListener('touchmove', e => {
+      const dy = e.touches[0].clientY - startY;
+      if (dy > 0) panelEl.style.transform = `translateY(${dy}px)`;
+    }, { passive: true });
+    handleEl.addEventListener('touchend', e => {
+      const dy      = e.changedTouches[0].clientY - startY;
+      const elapsed = Date.now() - startTime;
+      panelEl.style.transition = '';
+      panelEl.style.transform  = '';
+      if ((elapsed < 250 && dy > 40) || dy > 120) onDismiss();
+    });
+  }
+  const gymHandle = document.getElementById('panel-drag-handle');
+  const gymPanel  = document.getElementById('panel');
+  if (gymHandle && gymPanel) {
+    addSwipeDismiss(gymHandle, gymPanel, () => closePanel());
+  }
+})();
+
 function closePanel() {
   document.getElementById('panel').classList.remove('open');
   document.body.classList.remove('panel-open-mobile');
@@ -1479,14 +1506,29 @@ function showUpdateStatus(type, msg) {
 }
 
 // ── TRANSPORT STOPS ───────────────────────────────────────────────
+// ── OVERPASS TRANSPORT HELPER ────────────────────────────────────
+const OVERPASS_ENDPOINTS = [
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass-api.de/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+];
+async function fetchOverpass(query) {
+  for (const endpoint of OVERPASS_ENDPOINTS) {
+    try {
+      const r = await fetch(endpoint, { method: 'POST', body: 'data=' + encodeURIComponent(query) });
+      if (r.ok) return await r.json();
+    } catch(e) { /* try next endpoint */ }
+  }
+  throw new Error('All Overpass endpoints failed');
+}
+
 async function fetchTransportStops(lat, lng) {
   const statusEl = document.getElementById('transport-stops-status');
   const pillsEl  = document.getElementById('panel-transport');
   if (statusEl) statusEl.textContent = 'Loading nearby stops...';
   const query = `[out:json][timeout:15];(node["highway"="bus_stop"](around:600,${lat},${lng});node["railway"="station"](around:600,${lat},${lng});node["railway"="halt"](around:600,${lat},${lng});node["railway"="tram_stop"](around:600,${lat},${lng});node["station"="subway"](around:600,${lat},${lng}););out body;`;
   try {
-    const resp = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(query) });
-    const data = await resp.json();
+    const data = await fetchOverpass(query);
     if (!data.elements || data.elements.length === 0) {
       if (statusEl) statusEl.textContent = 'No stops within 600m.'; return;
     }
