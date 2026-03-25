@@ -1162,7 +1162,7 @@
     <div id="guide-modal-header">
       <div>
         <h2>ECN Pro — Map User Guide</h2>
-        <p>Everything you need to get the most from the site intelligence map</p>
+        <p>Everything you need to get the most from the site intelligence platform</p>
       </div>
       <button id="guide-close" onclick="toggleGuide()">✕</button>
     </div>
@@ -1170,76 +1170,91 @@
 
       <div class="guide-section">
         <h3>🗺️ Getting Started</h3>
-        <p>ECN Pro is a site intelligence platform for the climbing industry. It combines gym location data with population, demographic, and deprivation datasets to help you evaluate markets, assess sites, and understand the competitive landscape.</p>
-        <p>Pan and zoom the map using your mouse or trackpad. On mobile, use touch gestures. The map starts centred on the UK and Ireland — all 343+ climbing facilities are shown as orange dots.</p>
-        <div class="guide-tip">💡 Zoom in to see gyms in more detail. Click any gym marker to open its profile panel.</div>
+        <p>ECN Pro is a site intelligence platform for the climbing industry. It combines gym location data with population, demographic and deprivation datasets to help you evaluate markets, assess sites and understand the competitive landscape across the UK, Ireland and Europe.</p>
+        <p>Pan and zoom using your mouse or trackpad — on mobile, use touch gestures. All 343+ climbing facilities are shown as orange markers. Click any marker to open its profile panel.</p>
+        <div class="guide-tip">💡 On mobile, swipe down on the drag handle at the top of any panel to minimise it — your isochrones stay visible behind it. Tap the map to fully close.</div>
       </div>
 
       <div class="guide-section">
         <h3>🏟️ Gym Profiles</h3>
-        <p>Click any orange marker on the map to open that gym's profile on the right-hand panel. Each profile shows the gym's name, address, entry price, website, phone number, and confirmed amenities.</p>
-        <p>The <strong>Public Transport Nearby</strong> section shows the number of rail, tram and bus stops within 600m of the gym, pulled live from OpenStreetMap.</p>
-        <p>Use the <strong>Travel Zone</strong> slider to set a journey time between 10 and 60 minutes, then click <strong>Walk</strong>, <strong>Cycle</strong> or <strong>Drive</strong> to draw a catchment isochrone. The panel shows the estimated population inside that zone, the proportion aged 7–40 (the core climbing demographic), and the number of existing gyms within that catchment. Adjusting the slider while a zone is active redraws it automatically.</p>
-        <div class="guide-tip">💡 Enable the <strong>Population Density</strong> layer before drawing a travel zone for the most accurate catchment figures.</div>
-      </div>
-
-      <div class="guide-section">
-        <h3>📍 Location Analysis</h3>
-        <p>Click anywhere on the map — not on a gym marker — to run a location analysis on that point. A panel appears on the right showing all three travel zones simultaneously (walk, cycle, drive), each with estimated population and gym count.</p>
-        <p>This is designed for prospective site evaluation: drop a pin on any location to instantly understand how many people can reach it and how many gyms already serve that catchment.</p>
-        <p>Transport stops within 600m of the clicked point are also fetched and shown on the map as emoji markers.</p>
-        <div class="guide-tip">💡 The three coloured zone outlines (green = walk, blue = cycle, orange = drive) remain visible until you click the ✕ on the panel or select a gym.</div>
-      </div>
-
-      <div class="guide-section">
-        <h3>🔍 Data Layers</h3>
-        <p>Use the <strong>Layers</strong> button in the header to switch between four analytical overlays. Only one can be active at a time.</p>
-        <div class="guide-grid">
-          <div class="guide-card">
-            <strong>🏗️ Building Types</strong>
-            <span>Colours buildings by use — residential, commercial, industrial, leisure. Useful for understanding what surrounds a potential site.</span>
-          </div>
-          <div class="guide-card">
-            <strong>📊 Deprivation Index</strong>
-            <span>Shows relative deprivation at small-area level across England, Wales, Scotland, Northern Ireland and Ireland. Red = most deprived, green = least deprived.</span>
-          </div>
-          <div class="guide-card">
-            <strong>🧗 Youth Population</strong>
-            <span>Shows the proportion of the population aged 7–40 — the primary climbing demographic. Deep purple = high youth share, light yellow = low.</span>
-          </div>
-          <div class="guide-card">
-            <strong>👥 Population Density</strong>
-            <span>Raw population per km². Near-white = sparse rural, deep navy = dense urban core. Required for catchment population figures.</span>
-          </div>
-        </div>
-        <div class="guide-tip">💡 Data sources: ONS Census 2021 (England & Wales), NRS SAPE mid-2024 (Scotland), NISRA Census 2021 (Northern Ireland), CSO Census 2022 (Ireland), Eurostat GEOSTAT 2021 (continental Europe).</div>
-      </div>
-
-      <div class="guide-section">
-        <h3>📊 Gym Comparison</h3>
-        <p>You can compare travel zones for up to three gyms simultaneously. Open a gym profile, then click <strong>📍 Add to comparison</strong>. A coloured slot is assigned to that gym in the comparison tray at the bottom left. Draw a travel zone for each pinned gym using the walk/cycle/drive buttons.</p>
-        <p>The three zone colours (orange, teal, purple) correspond to Gym 1, 2 and 3 respectively. Use <strong>✕ Clear selection</strong> to reset the comparison.</p>
+        <p>Click any orange marker to open that gym's profile. Each listing shows the address, entry price, website, phone number, confirmed amenities and nearby public transport stops (fetched live from OpenStreetMap).</p>
+        <p>Amenities tracked include: Bouldering, Ropes, Autobelay, Café, Moonboard, Kilter Board, Tension Board, Woody Board, Training Space, Kids Zone, Speed Wall, Retail and Parking.</p>
+        <div class="guide-tip">💡 If a gym belongs to a chain, a badge appears in the panel header. Click <strong>Show all locations</strong> to highlight every site in that group on the map and fit the map to show them all.</div>
       </div>
 
       <div class="guide-section">
         <h3>🔎 Search & Filter</h3>
-        <p>Use the search bar in the header to find a gym by name or location. Results appear as you type — click any result to fly to that gym and open its profile.</p>
-        <p>The filter bar below the header lets you narrow the map to gyms with specific features: bouldering, ropes, autobelay, café, Moonboard, Kilter Board, Tension Board, Woody Board, kids zone, or speed wall. Select a filter to show only matching gyms.</p>
+        <p>Use the search bar in the header to find any gym by name. The filter bar below the header narrows the map to gyms with a specific facility — select any filter to show only matching locations. Click <strong>All gyms</strong> to reset.</p>
+        <p>Filters available: Bouldering, Ropes, Autobelay, Café, Moonboard, Kilter, Tension, Woody, Kids Zone, Speed Wall.</p>
+      </div>
+
+      <div class="guide-section">
+        <h3>🕐 Travel Zone Analysis</h3>
+        <p>With a gym selected, use the travel zone slider and buttons in the panel to generate an isochrone — the area reachable within your chosen journey time. Three travel modes are available:</p>
+        <p><strong>🚶 Walk</strong> — shown in green. <strong>🚴 Cycle</strong> — shown in blue. <strong>🚗 Drive</strong> — shown in orange.</p>
+        <p>Each isochrone includes a <strong>catchment population count</strong> — the number of people living within the zone, drawn from national census data at small-area resolution. For gyms in the UK and Ireland, a <strong>youth population figure</strong> (aged 7–40) is also shown — the core climbing demographic.</p>
+        <div class="guide-tip">💡 The slider runs from 10 to 60 minutes. If a travel zone is active, moving the slider redraws it automatically. You can pin up to 3 gyms for side-by-side comparison using the comparison tray.</div>
+      </div>
+
+      <div class="guide-section">
+        <h3>📍 Location Analysis</h3>
+        <p>Click anywhere on the map — not on a gym marker — to run a location analysis for that point. Three isochrones are drawn simultaneously (walk, cycle and drive at your current slider setting), along with competitor gym counts and catchment populations for each zone.</p>
+        <p>This is particularly useful for evaluating sites that don't yet have a gym — drop a pin on any proposed location in Europe to instantly understand the market.</p>
+        <div class="guide-tip">💡 The location panel also shows public transport stops within 600m of the analysis point, helping evaluate accessibility for non-drivers.</div>
+      </div>
+
+      <div class="guide-section">
+        <h3>🗂️ Map Layers</h3>
+        <p>Click <strong>Layers</strong> in the header to toggle data overlays. One layer can be active at a time. Available layers:</p>
+
+        <p><strong>🏗️ Building Types</strong><br>
+        Colours the map by land use — residential (amber), commercial (blue), industrial (grey), leisure and sport (green). Sourced from OpenStreetMap. Useful for identifying the character of an area around a potential site.</p>
+
+        <p><strong>📊 Deprivation Index</strong><br>
+        Shows relative deprivation at small-area level across the UK and Ireland, using five national indices harmonised and normalised within each nation: England (IMD 2025), Wales (WIMD 2019), Scotland (SIMD 2020), Northern Ireland (NIMDM 2017) and Ireland (Pobal HP Index 2022). Red indicates the most deprived areas, green the least. Note: rankings are relative within each nation and are not directly comparable across borders.</p>
+
+        <p><strong>🧗 Youth Population (7–40)</strong><br>
+        Shows the percentage of the population aged 7–40 — the core climbing demographic — at small-area resolution across the UK and Ireland. Darker purple indicates a higher concentration of this age group. Sources: ONS Census 2021 (England and Wales), NRS SAPE mid-2024 (Scotland), NISRA Census 2021 (Northern Ireland, using 15–39 as a proxy due to disclosure rules), CSO Census 2022 (Ireland). Not available for continental Europe due to the age band constraints in EU Regulation 1799/2018.</p>
+
+        <p><strong>👥 Population Density</strong><br>
+        Shows population per km² across the UK, Ireland and continental Europe. UK and Ireland use small-area census data for high precision. European coverage uses the Eurostat GEOSTAT 2021 census grid at 1km² resolution, covering EU27 plus Norway and Switzerland. Pale blue indicates low density, deep navy indicates high density (&gt;10,000 per km²).</p>
+
+        <div class="guide-tip">💡 Coming soon: <strong>Market Classification</strong> layer — showing whether each area is classified as a city, town/suburb or rural area across all of Europe, derived from the Eurostat Degree of Urbanisation (DEGURBA) dataset.</div>
+      </div>
+
+      <div class="guide-section">
+        <h3>📰 Round Up Markers</h3>
+        <p>Coloured square markers indicate gyms that have featured in a recent ECN Gym Round Up article — newly opened, announced, closing, expanding or otherwise newsworthy. Click any square marker to see the status, a summary and a link to the source article.</p>
+        <p>Squares transition to circles after 6 months. Colour indicates status: green (Opening), purple (Announced), red (Closing), grey (Closed), orange (Expanding), teal (Relocating), amber (Merging), blue (Renovating).</p>
+      </div>
+
+      <div class="guide-section">
+        <h3>🔗 Chain Highlighting</h3>
+        <p>When you open a gym that belongs to a chain, a chain badge appears in the panel header showing the chain name and number of locations. Click the badge button to hide all non-chain gyms and highlight the full chain estate in navy, with the map fitting to show all locations. Close the panel or click the button again to reset.</p>
+      </div>
+
+      <div class="guide-section">
+        <h3>📊 Gym Comparison</h3>
+        <p>Pin up to 3 gyms using the <strong>Add to comparison</strong> button in each gym's panel. Pinned gyms are shown with coloured travel zones simultaneously, letting you compare catchment populations and coverage across multiple sites at once. Click a pinned gym in the comparison tray to remove it.</p>
       </div>
 
       <div class="guide-section">
         <h3>➕ Add a Missing Gym</h3>
-        <p>Know of a climbing facility that isn't on the map? Click the <strong>+ Add Gym</strong> button in the header to open the submission form. You can provide the gym's name, address, website, phone, entry price, facility type, and which amenities it has.</p>
-        <p>All submissions are reviewed by the ECN team before appearing on the map. You can optionally leave your name or contact details in case we need to follow up.</p>
-        <div class="guide-tip">💡 The more detail you provide, the faster we can verify and add the listing.</div>
+        <p>Click <strong>+ Add Gym</strong> in the header to submit a facility that isn't on the map. Provide the name, address, website, gym type and amenities. All submissions are reviewed by the ECN team before appearing on the map.</p>
       </div>
 
       <div class="guide-section">
         <h3>✏️ Suggest a Correction</h3>
-        <p>If you notice outdated or incorrect information in a gym's profile, open the gym panel and click the <strong>Update Info</strong> tab. You can submit corrections for the gym's name, address, website, entry price, or report it as permanently closed.</p>
-        <p>All submissions go to the ECN team for review before any changes are made to the map.</p>
+        <p>If a gym's information is incorrect or outdated, open its profile and click the <strong>Update Info</strong> tab. You can correct the name, address, website, entry price or report a permanent closure. All updates are reviewed before any changes are applied to the map.</p>
       </div>
 
+      <div class="guide-section">
+        <h3>📱 Mobile Usage</h3>
+        <p>The map is fully functional on mobile. The filter bar scrolls horizontally. Gym and location panels slide up from the bottom as sheets. Swipe down on the drag handle at the top of any panel to minimise it to a slim strip — your travel zones remain fully visible. Tap anywhere on the map to fully close a minimised panel.</p>
+        <p>On iPhone, add the map to your home screen for a full-screen app-like experience: tap the Share button in Safari and select <strong>Add to Home Screen</strong>.</p>
+      </div>
+
+    </div>
     </div>
   </div>
 </div>
