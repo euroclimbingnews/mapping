@@ -633,11 +633,11 @@
     #search-results { max-height: 200px; }
 
     /* Map: starts below taller header (≈ 110px) + filter bar (≈ 46px) */
-    #map { top: 156px; }
+    #map { top: 172px; }
 
     /* Filter bar: full-width horizontal scroll strip */
     #filters {
-      top: 110px;
+      top: 126px;
       left: 0; right: 0;
       transform: none;
       border-radius: 0;
@@ -669,6 +669,7 @@
       box-shadow: 0 -8px 40px rgba(0,0,0,0.18);
     }
     #panel.open { transform: translateY(0); }
+    #panel.minimised { transform: translateY(calc(100% - 72px)); }
 
     /* Drag handle visible on mobile */
     #panel-drag-handle { display: block; }
@@ -1281,7 +1282,7 @@ function transportLabel(mode) {
 
 // ── MOBILE PANEL SWIPE TO DISMISS ────────────────────────────────
 (function() {
-  function addSwipeDismiss(handleEl, panelEl, onDismiss) {
+  function addSwipeMinimise(handleEl, panelEl, onMinimise, onRestore) {
     let startY = 0, startTime = 0;
     handleEl.addEventListener('touchstart', e => {
       startY    = e.touches[0].clientY;
@@ -1297,13 +1298,23 @@ function transportLabel(mode) {
       const elapsed = Date.now() - startTime;
       panelEl.style.transition = '';
       panelEl.style.transform  = '';
-      if ((elapsed < 250 && dy > 40) || dy > 120) onDismiss();
+      if ((elapsed < 250 && dy > 40) || dy > 120) {
+        if (panelEl.classList.contains('minimised')) onRestore();
+        else onMinimise();
+      }
+    });
+    handleEl.addEventListener('click', () => {
+      if (panelEl.classList.contains('minimised')) onRestore();
     });
   }
   const gymHandle = document.getElementById('panel-drag-handle');
   const gymPanel  = document.getElementById('panel');
   if (gymHandle && gymPanel) {
-    addSwipeDismiss(gymHandle, gymPanel, () => closePanel());
+    addSwipeMinimise(
+      gymHandle, gymPanel,
+      () => { gymPanel.classList.remove('open'); gymPanel.classList.add('minimised'); },
+      () => { gymPanel.classList.remove('minimised'); gymPanel.classList.add('open'); }
+    );
   }
 })();
 
@@ -1376,9 +1387,18 @@ function clearChainHighlight() {
 map.on('click', e => {
   const clickedMarker = e.originalEvent.target.closest('.gym-marker');
   if (clickedMarker) return;
-  document.getElementById('panel').classList.remove('open');
-  document.body.classList.remove('panel-open-mobile');
-  clearTransportMarkers();
+  const panel = document.getElementById('panel');
+  if (panel.classList.contains('minimised')) {
+    panel.classList.remove('minimised');
+    document.body.classList.remove('panel-open-mobile');
+    clearTransportMarkers();
+    clearChainHighlight();
+    return;
+  }
+  if (panel.classList.contains('open')) {
+    closePanel();
+    return;
+  }
 });
 
 // ── USER GUIDE ────────────────────────────────────────────────────

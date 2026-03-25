@@ -855,6 +855,7 @@
     #loc-panel { top: auto; bottom: 80px; left: 16px; right: 16px;
       width: auto; transform: translateY(200%); }
     #loc-panel.open { transform: translateY(0); }
+    #loc-panel.minimised { transform: translateY(calc(100% - 64px)); }
   }
 
   /* ── LOADING OVERLAY ─────────────────────────────────── */
@@ -967,11 +968,11 @@
     #search-results { max-height: 200px; }
 
     /* Map: starts below taller header (≈ 110px) + filter bar (≈ 46px) */
-    #map { top: 156px; }
+    #map { top: 172px; }
 
     /* Filter bar: full-width horizontal scroll strip */
     #filters {
-      top: 110px;
+      top: 126px;
       left: 0; right: 0;
       transform: none;
       border-radius: 0;
@@ -1003,6 +1004,8 @@
       box-shadow: 0 -8px 40px rgba(0,0,0,0.18);
     }
     #panel.open { transform: translateY(0); }
+    /* Minimised: peek mode — header visible, body hidden */
+    #panel.minimised { transform: translateY(calc(100% - 72px)); }
 
     /* Drag handle visible on mobile */
     #panel-drag-handle { display: block; }
@@ -1892,7 +1895,7 @@ function updateTravelButtons(idx) {
 
 // ── MOBILE PANEL DRAG TO DISMISS ─────────────────────────────────
 (function() {
-  function addSwipeDismiss(handleEl, panelEl, onDismiss) {
+  function addSwipeMinimise(handleEl, panelEl, onMinimise, onRestore) {
     let startY = 0, startTime = 0;
     handleEl.addEventListener('touchstart', e => {
       startY    = e.touches[0].clientY;
@@ -1904,28 +1907,50 @@ function updateTravelButtons(idx) {
       if (dy > 0) panelEl.style.transform = `translateY(${dy}px)`;
     }, { passive: true });
     handleEl.addEventListener('touchend', e => {
-      const dy       = e.changedTouches[0].clientY - startY;
-      const elapsed  = Date.now() - startTime;
-      const isFlick  = elapsed < 250 && dy > 40;
-      const isDrag   = dy > 120;
+      const dy      = e.changedTouches[0].clientY - startY;
+      const elapsed = Date.now() - startTime;
       panelEl.style.transition = '';
       panelEl.style.transform  = '';
-      if (isFlick || isDrag) onDismiss();
+      if ((elapsed < 250 && dy > 40) || dy > 120) {
+        // Swipe down → minimise to peek
+        if (panelEl.classList.contains('minimised')) {
+          onRestore();
+        } else {
+          onMinimise();
+        }
+      }
+    });
+    // Tap on drag handle when minimised → restore
+    handleEl.addEventListener('click', () => {
+      if (panelEl.classList.contains('minimised')) onRestore();
     });
   }
 
-  // Gym panel
   const gymHandle = document.getElementById('panel-drag-handle');
   const gymPanel  = document.getElementById('panel');
   if (gymHandle && gymPanel) {
-    addSwipeDismiss(gymHandle, gymPanel, () => closePanel());
+    addSwipeMinimise(
+      gymHandle, gymPanel,
+      () => { // minimise
+        gymPanel.classList.remove('open');
+        gymPanel.classList.add('minimised');
+      },
+      () => { // restore
+        gymPanel.classList.remove('minimised');
+        gymPanel.classList.add('open');
+      }
+    );
   }
 
-  // Location panel
+  // Location panel — swipe header to minimise
   const locHandle = document.getElementById('loc-panel-header');
   const locPanel  = document.getElementById('loc-panel');
   if (locHandle && locPanel) {
-    addSwipeDismiss(locHandle, locPanel, () => clearLocationZones());
+    addSwipeMinimise(
+      locHandle, locPanel,
+      () => { locPanel.classList.remove('open'); locPanel.classList.add('minimised'); },
+      () => { locPanel.classList.remove('minimised'); locPanel.classList.add('open'); }
+    );
   }
 })();
 
@@ -3384,17 +3409,28 @@ function clearLocationZones(closePanel = true) {
 
 // ── MAP CLICK HANDLER ─────────────────────────────────────────────
 map.on('click', e => {
-  // Ignore clicks on gym markers (they have their own handler)
-  const features = map.queryRenderedFeatures(e.point, { layers: [] });
   const clickedMarker = e.originalEvent.target.closest('.gym-marker, .transport-marker, .roundup-marker, #loc-cursor');
   if (clickedMarker) return;
 
-  // Close panels if open
-  document.getElementById('panel').classList.remove('open');
-  document.body.classList.remove('panel-open-mobile');
-  document.getElementById('roundup-panel').classList.remove('open');
-  clearTransportMarkers();
+  const panel = document.getElementById('panel');
 
+  // If panel is minimised — fully close it, don't open location zones
+  if (panel.classList.contains('minimised')) {
+    panel.classList.remove('minimised');
+    document.body.classList.remove('panel-open-mobile');
+    clearTransportMarkers();
+    clearChainHighlight();
+    return;
+  }
+
+  // If panel is open — close it
+  if (panel.classList.contains('open')) {
+    closePanel();
+    return;
+  }
+
+  // Otherwise open location zones
+  document.getElementById('roundup-panel').classList.remove('open');
   drawLocationZones(e.lngLat.lng, e.lngLat.lat);
 });
 
