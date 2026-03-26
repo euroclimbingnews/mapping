@@ -324,6 +324,8 @@
   #age-legend-note p { font-size: 0.67rem; color: var(--stone); line-height: 1.6; margin: 0; }
   #density-legend { display: none; }
   #density-legend.visible { display: block; }
+  #degurba-legend { display: none; }
+  #degurba-legend.visible { display: block; }
   #iso-legend { display: none; }
   #iso-legend.visible { display: block; }
   #imd-legend-note { margin-top: 8px; border-top: 1px solid rgba(0,0,0,0.08); padding-top: 6px; }
@@ -1373,6 +1375,9 @@
   <label class="layer-option" id="lopt-density">
     <input type="radio" name="maplayer" value="density" onchange="setMapLayer('density')"> 👥 Population Density
   </label>
+  <label class="layer-option" id="lopt-degurba">
+    <input type="radio" name="maplayer" value="degurba" onchange="setMapLayer('degurba')"> 🏙️ Market Classification
+  </label>
   <hr class="layer-divider">
   <p class="layer-note">ⓘ Building types: OpenStreetMap. Deprivation: UK & Ireland indices, normalised within each nation. Youth population: % aged 7–40 (core climbing catchment). See legend for dataset dates.</p>
 </div>
@@ -1552,6 +1557,17 @@
         <p style="font-size:0.67rem;color:var(--stone);line-height:1.6;margin:0">🇬🇧 NISRA Census 2021</p>
         <p style="font-size:0.67rem;color:var(--stone);line-height:1.6;margin:0">🇮🇪 CSO Census 2022</p>
         <p style="font-size:0.67rem;color:var(--stone);line-height:1.6;margin:0">🌍 Eurostat GEOSTAT 2021</p>
+      </div>
+    </div>
+    <div id="degurba-legend">
+      <h5>Market Classification</h5>
+      <div class="bleg-row"><div class="bleg-swatch" style="background:#1e3a6e"></div> City</div>
+      <div class="bleg-row"><div class="bleg-swatch" style="background:#2563ab"></div> Town / Suburb</div>
+      <div class="bleg-row"><div class="bleg-swatch" style="background:#93c5fd"></div> Rural</div>
+      <div style="margin-top:8px;border-top:1px solid rgba(0,0,0,0.08);padding-top:6px;">
+        <p style="font-size:0.67rem;color:var(--stone);line-height:1.6;margin:0">🌍 Eurostat GISCO</p>
+        <p style="font-size:0.67rem;color:var(--stone);line-height:1.6;margin:0">Degree of Urbanisation 2021</p>
+        <p style="font-size:0.67rem;color:var(--stone);line-height:1.6;margin:0">© EuroGeographics</p>
       </div>
     </div>
   </div>
@@ -2308,6 +2324,7 @@ map.on('load', () => {
   addImdLayer();
   addAgeLayer();
   addDensityLayer();
+  addDegurbaLayer();
 });
 
 // ── LAYERS PANEL ───────────────────────────────────────────────
@@ -2796,6 +2813,7 @@ function setMapLayer(layer) {
   document.getElementById('imd-legend').classList.toggle('visible', layer === 'imd');
   document.getElementById('age-legend').classList.toggle('visible', layer === 'age');
   document.getElementById('density-legend').classList.toggle('visible', layer === 'density');
+  document.getElementById('degurba-legend').classList.toggle('visible', layer === 'degurba');
 
   // Toggle map layers
   const buildingIds = ['ecn-landuse-fill', 'ecn-building-fill'];
@@ -2818,6 +2836,10 @@ function setMapLayer(layer) {
     if (map.getLayer(id))
       map.setLayoutProperty(id, 'visibility', layer === 'density' ? 'visible' : 'none');
   });
+  if (map.getLayer('ecn-degurba-fill'))
+    map.setLayoutProperty('ecn-degurba-fill', 'visibility', layer === 'degurba' ? 'visible' : 'none');
+  if (map.getLayer('ecn-degurba-line'))
+    map.setLayoutProperty('ecn-degurba-line', 'visibility', layer === 'degurba' ? 'visible' : 'none');
 }
 
 // ── BUILDING TYPE MAP LAYERS ────────────────────────────────────
@@ -3096,6 +3118,49 @@ function addDensityLayer() {
       'fill-outline-color': 'rgba(0,0,0,0.05)'
     }
   }, 'waterway-label');
+}
+
+// ── MARKET CLASSIFICATION (DEGURBA) ──────────────────────────────
+const DEGURBA_TILESET     = 'euroclimbingnews.1jx22ek8';
+const DEGURBA_SOURCE_LAYER = 'degurba_europe-58z0ph';
+
+function addDegurbaLayer() {
+  map.addSource('ecn-degurba-src', {
+    type: 'vector',
+    url: `mapbox://${DEGURBA_TILESET}`
+  });
+
+  map.addLayer({
+    id:     'ecn-degurba-fill',
+    type:   'fill',
+    source: 'ecn-degurba-src',
+    'source-layer': DEGURBA_SOURCE_LAYER,
+    layout: { visibility: 'none' },
+    paint: {
+      'fill-color': [
+        'match', ['get', 'degurba'],
+        '1', '#1e3a6e',   // City — deep navy
+        '2', '#2563ab',   // Town/Suburb — mid blue
+        '3', '#93c5fd',   // Rural — pale blue
+        '#e2e8f0'         // fallback
+      ],
+      'fill-opacity': 0.55
+    }
+  }, 'ecn-imd-fill'); // insert below other data layers, above basemap
+
+  // Thin border between municipalities
+  map.addLayer({
+    id:     'ecn-degurba-line',
+    type:   'line',
+    source: 'ecn-degurba-src',
+    'source-layer': DEGURBA_SOURCE_LAYER,
+    layout: { visibility: 'none' },
+    paint: {
+      'line-color': '#ffffff',
+      'line-opacity': 0.15,
+      'line-width': 0.4
+    }
+  }, 'ecn-imd-fill');
 }
 
 // ── CATCHMENT POPULATION COUNTER ─────────────────────────────────
