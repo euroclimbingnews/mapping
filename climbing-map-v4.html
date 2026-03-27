@@ -2584,7 +2584,29 @@ async function loadRoundUpData() {
   try {
     const resp = await fetch(ROUNDUP_CSV_URL);
     const text = await resp.text();
-    const rows = text.trim().split('\n').map(r => r.split(','));
+
+    // Proper CSV parser — handles quoted fields containing commas
+    function parseCSVRow(row) {
+      const result = [];
+      let current = '';
+      let inQuotes = false;
+      for (let i = 0; i < row.length; i++) {
+        const ch = row[i];
+        if (ch === '"') {
+          if (inQuotes && row[i+1] === '"') { current += '"'; i++; }
+          else inQuotes = !inQuotes;
+        } else if (ch === ',' && !inQuotes) {
+          result.push(current.trim());
+          current = '';
+        } else {
+          current += ch;
+        }
+      }
+      result.push(current.trim());
+      return result;
+    }
+
+    const rows = text.trim().split('\n').map(r => parseCSVRow(r));
     if (rows.length < 2) return;
 
     // Headers: Extracted, Article, Gym Name, Location, Country,
