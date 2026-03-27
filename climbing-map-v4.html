@@ -695,11 +695,6 @@
   .roundup-marker.status-announced { background: #7c3aed; }
   .roundup-marker.status-closing   { background: #dc2626; }
   .roundup-marker.status-closed    { background: #6b7280; }
-  .roundup-marker.status-expanding { background: #ea580c; }
-  .roundup-marker.status-relocating{ background: #0891b2; }
-  .roundup-marker.status-merging   { background: #d97706; }
-  .roundup-marker.status-renovating{ background: #2563ab; }
-  .roundup-marker.status-update    { background: #64748b; }
 
   /* ── ROUND UP PANEL ─────────────────────────────────────── */
   #roundup-panel {
@@ -1226,8 +1221,8 @@
 
       <div class="guide-section">
         <h3>📰 Round Up Markers</h3>
-        <p>Coloured square markers indicate gyms that have featured in a recent ECN Gym Round Up article — newly opened, announced, closing, expanding or otherwise newsworthy. Click any square marker to see the status, a summary and a link to the source article.</p>
-        <p>Squares transition to circles after 6 months. Colour indicates status: green (Opening), purple (Announced), red (Closing), grey (Closed), orange (Expanding), teal (Relocating), amber (Merging), blue (Renovating).</p>
+        <p>Coloured square markers indicate climbing facilities at significant stages of their lifecycle — newly opened, announced, or closing. These are sourced from ECN's monthly Gym Round Up articles and reviewed before appearing on the map.</p>
+        <p>Squares transition to circles after 6 months. Colour indicates status: <strong style="color:#16a34a">green (Opening)</strong>, <strong style="color:#7c3aed">purple (Announced)</strong>, <strong style="color:#dc2626">red (Closing)</strong>, <strong style="color:#6b7280">grey (Closed)</strong>. Click any marker to see a summary and link to the source article.</p>
       </div>
 
       <div class="guide-section">
@@ -2623,7 +2618,8 @@ async function loadRoundUpData() {
     }).filter(g =>
       g.approved === 'YES' &&
       !isNaN(g.lat) && !isNaN(g.lng) &&
-      g.lat !== 0 && g.lng !== 0
+      g.lat !== 0 && g.lng !== 0 &&
+      ['Opening','Announced','Closing','Closed'].includes(g.status)
     );
 
     buildRoundUpMarkers(gyms);
