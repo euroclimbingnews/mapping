@@ -1218,13 +1218,18 @@
         <p><strong>👥 Population Density</strong><br>
         Shows population per km² across the UK, Ireland and continental Europe. UK and Ireland use small-area census data for high precision. European coverage uses the Eurostat GEOSTAT 2021 census grid at 1km² resolution, covering EU27 plus Norway and Switzerland. Pale blue indicates low density, deep navy indicates high density (&gt;10,000 per km²).</p>
 
-        <div class="guide-tip">💡 Coming soon: <strong>Market Classification</strong> layer — showing whether each area is classified as a city, town/suburb or rural area across all of Europe, derived from the Eurostat Degree of Urbanisation (DEGURBA) dataset.</div>
+        <p><strong>🏙️ Market Classification</strong><br>
+        Classifies every municipality across Europe as a City, Town/Suburb or Rural area — shown in deep navy, mid blue and pale blue respectively. This layer helps you quickly understand the character of a market rather than just its size. A large catchment population in a rural classification tells a very different story to the same population in a city.<br><br>
+        The classification is derived from the Eurostat Degree of Urbanisation framework (commonly referred to as DEGURBA), which uses 1km² population grid cells to determine whether each local administrative unit meets the density thresholds for city, town or rural designation. The data covers EU member states plus Norway and Switzerland and is based on the 2021 census round. Source: Eurostat GISCO — © EuroGeographics.</p>
+
+        <div class="guide-tip">💡 Market Classification works best alongside Population Density — use density to understand how many people are in a catchment, and Market Classification to understand what kind of market they represent.</div>
       </div>
 
       <div class="guide-section">
         <h3>📰 Round Up Markers</h3>
-        <p>Coloured square markers indicate climbing facilities at significant stages of their lifecycle — newly opened, announced, or closing. These are sourced from ECN's monthly Gym Round Up articles and reviewed before appearing on the map. Markers are removed after 3 months.</p>
-        <p>Colour indicates status: <strong style="color:#16a34a">green (Opening)</strong>, <strong style="color:#7c3aed">purple (Announced)</strong>, <strong style="color:#dc2626">red (Closing)</strong>, <strong style="color:#6b7280">grey (Closed)</strong>. Click any marker to see a summary and link to the source article.</p>
+        <p>Coloured square markers indicate climbing facilities at significant stages of their lifecycle — newly opened, announced, or closing. These are sourced from ECN's monthly Gym Round Up articles and reviewed by the ECN team before appearing on the map.</p>
+        <p>Colour indicates status: <strong style="color:#16a34a">green (Opening)</strong>, <strong style="color:#7c3aed">purple (Announced)</strong>, <strong style="color:#dc2626">red (Closing)</strong>, <strong style="color:#6b7280">grey (Closed)</strong>. Click any marker to see a summary and a link to the source article. Markers are automatically removed after 3 months.</p>
+        <div class="guide-tip">⚠️ Marker locations are approximate. Announced and pre-opening gyms rarely have a confirmed address — markers are placed at city or town level based on available information at the time of publication. Treat locations as indicative only until the gym opens.</div>
       </div>
 
       <div class="guide-section">
@@ -1584,7 +1589,6 @@
 <div id="count-badge"><span id="visible-count">314</span> gyms</div>
 
 <script>
- 
 // ═══════════════════════════════════════════════════════════════
 //  CONFIG — update this URL when you change your Google Sheet
 // ═══════════════════════════════════════════════════════════════
@@ -2210,13 +2214,13 @@ const OVERPASS_ENDPOINTS = [
   'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
 ];
 async function fetchOverpass(query) {
-  for (const endpoint of OVERPASS_ENDPOINTS) {
-    try {
-      const r = await fetch(endpoint, { method: 'POST', body: 'data=' + encodeURIComponent(query) });
-      if (r.ok) return await r.json();
-    } catch(e) { /* try next endpoint */ }
-  }
-  throw new Error('All Overpass endpoints failed');
+  // Race all endpoints simultaneously — use whichever responds first
+  const body = 'data=' + encodeURIComponent(query);
+  const attempts = OVERPASS_ENDPOINTS.map(endpoint =>
+    fetch(endpoint, { method: 'POST', body })
+      .then(r => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)))
+  );
+  return Promise.any(attempts);
 }
 
 async function fetchTransportStops(lat, lng) {

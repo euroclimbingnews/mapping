@@ -1533,13 +1533,12 @@ const OVERPASS_ENDPOINTS = [
   'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
 ];
 async function fetchOverpass(query) {
-  for (const endpoint of OVERPASS_ENDPOINTS) {
-    try {
-      const r = await fetch(endpoint, { method: 'POST', body: 'data=' + encodeURIComponent(query) });
-      if (r.ok) return await r.json();
-    } catch(e) { /* try next endpoint */ }
-  }
-  throw new Error('All Overpass endpoints failed');
+  const body = 'data=' + encodeURIComponent(query);
+  const attempts = OVERPASS_ENDPOINTS.map(endpoint =>
+    fetch(endpoint, { method: 'POST', body })
+      .then(r => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)))
+  );
+  return Promise.any(attempts);
 }
 
 function getTransportIcon(tags) {
