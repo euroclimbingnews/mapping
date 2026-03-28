@@ -821,7 +821,7 @@
 
       <div class="guide-section">
         <h3>🗺️ Getting Started</h3>
-        <p>The ECN Gym Map is a free resource showing climbing facilities across the UK, Ireland and Europe. All 343 mapped sites are shown as orange dots. Pan and zoom using your mouse or trackpad — on mobile, use touch gestures.</p>
+        <p>The ECN Gym Map is a free resource showing climbing facilities across the UK, Ireland and Europe. Over 340 mapped sites are shown as orange dots. Pan and zoom using your mouse or trackpad — on mobile, use touch gestures.</p>
         <div class="guide-tip">💡 Click any orange marker to open that gym's profile. Search by name using the search bar in the header.</div>
       </div>
 
@@ -1540,6 +1540,20 @@ async function fetchOverpass(query) {
     } catch(e) { /* try next endpoint */ }
   }
   throw new Error('All Overpass endpoints failed');
+}
+
+function getTransportIcon(tags) {
+  if (!tags) return '🚏';
+  const railway = (tags.railway || '').toLowerCase();
+  const station = (tags.station || '').toLowerCase();
+  const subway  = (tags.subway  || '').toLowerCase();
+  if (railway === 'station' || railway === 'halt') {
+    if (station === 'subway' || subway === 'yes') return '🚇';
+    if (station === 'light_rail' || railway === 'light_rail') return '🚈';
+    return '🚂';
+  }
+  if (railway === 'tram_stop') return '🚃';
+  return '🚌';
 }
 
 async function fetchTransportStops(lat, lng) {

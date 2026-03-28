@@ -1502,6 +1502,9 @@
       <div class="bleg-row"><div class="bleg-swatch" style="background:#7c3aed;border-radius:3px"></div> Announced</div>
       <div class="bleg-row"><div class="bleg-swatch" style="background:#dc2626;border-radius:3px"></div> Closing</div>
       <div class="bleg-row"><div class="bleg-swatch" style="background:#6b7280;border-radius:3px"></div> Closed</div>
+      <hr style="border:none;border-top:1px solid rgba(0,0,0,0.08);margin:6px 0">
+      <h5>Gyms</h5>
+      <div class="bleg-row"><div class="bleg-swatch" style="background:var(--orange);border-radius:50%;border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.3)"></div> Established gym</div>
     </div>
     <div id="iso-legend">
       <h5>Travel Zones</h5>
@@ -2680,6 +2683,22 @@ function buildRoundUpMarkers(gyms) {
     }
 
     el.title = gym.name + ' — ' + gym.status;
+
+    // Hover tooltip — same behaviour as gym markers
+    const tooltip = document.getElementById('gym-tooltip');
+    el.addEventListener('mouseenter', (e) => {
+      tooltip.textContent = gym.name;
+      tooltip.style.left = e.clientX + 'px';
+      tooltip.style.top  = e.clientY + 'px';
+      tooltip.classList.add('visible');
+    });
+    el.addEventListener('mousemove', (e) => {
+      tooltip.style.left = e.clientX + 'px';
+      tooltip.style.top  = e.clientY + 'px';
+    });
+    el.addEventListener('mouseleave', () => {
+      tooltip.classList.remove('visible');
+    });
 
     el.addEventListener('click', (e) => {
       e.stopPropagation();
