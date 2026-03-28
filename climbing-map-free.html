@@ -1204,6 +1204,9 @@ function selectGym(idx, el) {
   el.classList.add('selected');
   selectedGym = GYMS.features[idx];
   selectedGymIdx = idx;
+  // Clear tooltip immediately on tap (no mouseleave on mobile)
+  const tooltip = document.getElementById('gym-tooltip');
+  if (tooltip) tooltip.classList.remove('visible');
   clearTransportMarkers();
   showPanel(selectedGym.properties, idx);
   map.flyTo({ center: selectedGym.geometry.coordinates, zoom: Math.max(map.getZoom(), 13), duration: 800 });
@@ -1317,7 +1320,11 @@ function transportLabel(mode) {
   if (gymHandle && gymPanel) {
     addSwipeMinimise(
       gymHandle, gymPanel,
-      () => { gymPanel.classList.remove('open'); gymPanel.classList.add('minimised'); },
+      () => {
+        gymPanel.classList.remove('open');
+        gymPanel.classList.add('minimised');
+        clearChainHighlight();
+      },
       () => { gymPanel.classList.remove('minimised'); gymPanel.classList.add('open'); }
     );
   }
@@ -1393,15 +1400,9 @@ map.on('click', e => {
   const clickedMarker = e.originalEvent.target.closest('.gym-marker');
   if (clickedMarker) return;
   const panel = document.getElementById('panel');
-  if (panel.classList.contains('minimised')) {
-    panel.classList.remove('minimised');
-    document.body.classList.remove('panel-open-mobile');
-    clearTransportMarkers();
-    clearChainHighlight();
-    return;
-  }
-  if (panel.classList.contains('open')) {
+  if (panel.classList.contains('minimised') || panel.classList.contains('open')) {
     closePanel();
+    panel.classList.remove('minimised');
     return;
   }
 });
