@@ -328,6 +328,8 @@
   #degurba-legend.visible { display: block; }
   #iso-legend { display: none; }
   #iso-legend.visible { display: block; }
+  #roundup-legend { display: none; }
+  #roundup-legend.visible { display: block; }
   #imd-legend-note { margin-top: 8px; border-top: 1px solid rgba(0,0,0,0.08); padding-top: 6px; }
   #imd-legend-note p { font-size: 0.67rem; color: var(--stone); line-height: 1.6; margin: 0; }
   .imd-legend-disclaimer { font-style: italic; margin-top: 4px !important; color: #aaa !important; font-size: 0.63rem !important; }
@@ -690,7 +692,7 @@
     cursor: pointer; transition: transform 0.15s;
   }
   .roundup-marker:hover { transform: scale(1.4); }
-  .roundup-marker.aged  { border-radius: 50%; } /* circle after 6 months */
+  .roundup-marker.aged  { border-radius: 50%; } /* circle after 3 months */
   .roundup-marker.status-opening   { background: #16a34a; }
   .roundup-marker.status-announced { background: #7c3aed; }
   .roundup-marker.status-closing   { background: #dc2626; }
@@ -1221,8 +1223,8 @@
 
       <div class="guide-section">
         <h3>📰 Round Up Markers</h3>
-        <p>Coloured square markers indicate climbing facilities at significant stages of their lifecycle — newly opened, announced, or closing. These are sourced from ECN's monthly Gym Round Up articles and reviewed before appearing on the map.</p>
-        <p>Squares transition to circles after 6 months. Colour indicates status: <strong style="color:#16a34a">green (Opening)</strong>, <strong style="color:#7c3aed">purple (Announced)</strong>, <strong style="color:#dc2626">red (Closing)</strong>, <strong style="color:#6b7280">grey (Closed)</strong>. Click any marker to see a summary and link to the source article.</p>
+        <p>Coloured square markers indicate climbing facilities at significant stages of their lifecycle — newly opened, announced, or closing. These are sourced from ECN's monthly Gym Round Up articles and reviewed before appearing on the map. Markers are removed after 3 months.</p>
+        <p>Colour indicates status: <strong style="color:#16a34a">green (Opening)</strong>, <strong style="color:#7c3aed">purple (Announced)</strong>, <strong style="color:#dc2626">red (Closing)</strong>, <strong style="color:#6b7280">grey (Closed)</strong>. Click any marker to see a summary and link to the source article.</p>
       </div>
 
       <div class="guide-section">
@@ -1494,6 +1496,13 @@
   <div id="comparison-tray"></div>
   <button id="clear-selection-btn" onclick="clearSelection()">✕ Clear selection</button>
   <div id="legend">
+    <div id="roundup-legend">
+      <h5>Round Up</h5>
+      <div class="bleg-row"><div class="bleg-swatch" style="background:#16a34a;border-radius:3px"></div> Opening</div>
+      <div class="bleg-row"><div class="bleg-swatch" style="background:#7c3aed;border-radius:3px"></div> Announced</div>
+      <div class="bleg-row"><div class="bleg-swatch" style="background:#dc2626;border-radius:3px"></div> Closing</div>
+      <div class="bleg-row"><div class="bleg-swatch" style="background:#6b7280;border-radius:3px"></div> Closed</div>
+    </div>
     <div id="iso-legend">
       <h5>Travel Zones</h5>
       <div class="bleg-row"><div class="bleg-swatch" style="background:#2a8a4a"></div> 🚶 Walk</div>
@@ -2656,21 +2665,18 @@ function buildRoundUpMarkers(gyms) {
   roundupMarkers = [];
 
   const now = new Date();
+  const legendEl = document.getElementById('roundup-legend');
 
   gyms.forEach(gym => {
     const el = document.createElement('div');
     const statusKey = gym.status.toLowerCase();
     el.className = 'roundup-marker status-' + statusKey;
 
-    // Check if older than 6 months → switch to circle
-    let aged = false;
+    // Skip markers older than 3 months
     if (gym.dateApproved) {
       const approved = new Date(gym.dateApproved);
       const monthsDiff = (now - approved) / (1000 * 60 * 60 * 24 * 30.44);
-      if (monthsDiff > 6) {
-        aged = true;
-        el.classList.add('aged');
-      }
+      if (monthsDiff > 3) return; // remove from map after 3 months
     }
 
     el.title = gym.name + ' — ' + gym.status;
@@ -2686,6 +2692,9 @@ function buildRoundUpMarkers(gyms) {
 
     roundupMarkers.push(marker);
   });
+
+  // Show legend only if there are active markers
+  if (legendEl) legendEl.classList.toggle('visible', roundupMarkers.length > 0);
 }
 
 function openRoundUpPanel(gym) {
