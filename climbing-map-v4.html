@@ -3477,10 +3477,6 @@ async function calcCatchmentPop(isoPolygon) {
     } catch(e) {}
   });
 
-  const avgAge = ageWeightSum > 0 ? Math.round(weightedAge / ageWeightSum) : null;
-  return { totalPop, avgAge };
-}
-
 async function updateGymCatchmentStats(isoData, mode) {
   const statusEl = document.getElementById('iso-status');
   const modeLabel = { walking: '🚶 walk', cycling: '🚴 cycle', driving: '🚗 drive' }[mode] || mode;
