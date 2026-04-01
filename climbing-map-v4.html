@@ -3243,22 +3243,17 @@ function addDegurbaLayer() {
 // ── EU YOUTH POPULATION (WorldPop Global2) ────────────────────────
 const EU_YOUTH_TILESET      = 'euroclimbingnews.dc9sw72t';
 const EU_YOUTH_SOURCE_LAYER = 'europe_youth_pct_uint8-3v2bkh';
+const EU_YOUTH_VEC_TILESET  = 'euroclimbingnews.3j2q7tyu';
+const EU_YOUTH_VEC_LAYER    = 'europe_youth_counts-d2zzsr';
 
 function addEuYouthLayer() {
+  // ── Raster layer (visual) ──────────────────────────────────────
   map.addSource('ecn-euyouth-src', {
     type: 'raster',
     url: `mapbox://${EU_YOUTH_TILESET}`,
     tileSize: 256,
   });
 
-  // raster-value is normalised 0-1 for uint8 rasters (pixel ÷ 255)
-  // Our pixel values: 0-100 = youth %, 255 = nodata (ocean/uninhabited)
-  // Pixel 0   → raster-value 0.000  (0% youth)
-  // Pixel 25  → raster-value 0.098  (25% youth)
-  // Pixel 30  → raster-value 0.118  (30% youth)
-  // Pixel 40  → raster-value 0.157  (40% youth)
-  // Pixel 100 → raster-value 0.392  (100% youth)
-  // Pixel 255 → raster-value 1.000  (nodata → transparent)
   map.addLayer({
     id:     'ecn-euyouth-raster',
     type:   'raster',
@@ -3269,18 +3264,34 @@ function addEuYouthLayer() {
       'raster-color-range': [0, 1],
       'raster-color': [
         'interpolate', ['linear'], ['raster-value'],
-        0.000, 'rgba(240, 247, 255, 0.1)',  // ~0%  — near transparent
-        0.090, '#dbeafe',                    // ~23% — pale blue
-        0.110, '#93c5fd',                    // ~28%
-        0.130, '#3b82f6',                    // ~33%
-        0.150, '#2563ab',                    // ~38%
-        0.170, '#1e3a6e',                    // ~43%
-        0.200, '#0f172a',                    // ~51% — deep navy
-        0.392, '#0f172a',                    // 100% max expected value
-        0.990, '#0f172a',                    // keep dark up to nodata
-        1.000, 'rgba(0, 0, 0, 0)',           // nodata (255/255=1.0) — transparent
+        0.000, 'rgba(240, 247, 255, 0.1)',
+        0.090, '#dbeafe',
+        0.110, '#93c5fd',
+        0.130, '#3b82f6',
+        0.150, '#2563ab',
+        0.170, '#1e3a6e',
+        0.200, '#0f172a',
+        0.392, '#0f172a',
+        0.990, '#0f172a',
+        1.000, 'rgba(0, 0, 0, 0)',
       ],
     }
+  });
+
+  // ── Vector points (for catchment counting) ────────────────────
+  map.addSource('ecn-euyouth-vec-src', {
+    type: 'vector',
+    url: `mapbox://${EU_YOUTH_VEC_TILESET}`,
+  });
+
+  // Hidden circle layer — needed so querySourceFeatures works
+  map.addLayer({
+    id:     'ecn-euyouth-vec-points',
+    type:   'circle',
+    source: 'ecn-euyouth-vec-src',
+    'source-layer': EU_YOUTH_VEC_LAYER,
+    layout: { visibility: 'none' },
+    paint:  { 'circle-radius': 0, 'circle-opacity': 0 }
   });
 }
 // Uses Turf.js to intersect isochrone polygon with density tileset features
@@ -3308,8 +3319,96 @@ async function calcCatchmentPop(isoPolygon) {
   // Wait a tick for tiles to finish loading after fitBounds
   await new Promise(r => setTimeout(r, 800));
 
-  let totalPop = 0, weightedAge = 0, ageWeightSum = 0;
-  let densityFeatures = [], ageFeatures = [], euDensityFeatures = [];
+  let totalPop = 0, weightedAge = 0, ageWeightSum = 0, euYouthPop = 0;
+  let densityFeatures = [], ageFeatures = [], euDensityFeatures = [], euYouthFeatures = [];
+
+  try {
+    densityFeatures = map.querySourceFeatures('ecn-density-src', {
+      sourceLayer: DENSITY_SOURCE_LAYER
+    });
+  } catch(e) { console.warn('UK/Ireland density query failed:', e); }
+
+  try {
+    ageFeatures = map.querySourceFeatures('ecn-age-src', {
+      sourceLayer: AGE_SOURCE_LAYER
+    });
+  } catch(e) { console.warn('Age query failed:', e); }
+
+  try {
+    const part1 = map.querySourceFeatures('ecn-eu-density-src-1', { sourceLayer: EU_DENSITY_SOURCE_1 });
+    const part2 = map.querySourceFeatures('ecn-eu-density-src-2', { sourceLayer: EU_DENSITY_SOURCE_2 });
+    euDensityFeatures = [...part1, ...part2];
+  } catch(e) { console.warn('EU density query failed:', e); }
+
+  try {
+    euYouthFeatures = map.querySourceFeatures('ecn-euyouth-vec-src', {
+      sourceLayer: EU_YOUTH_VEC_LAYER
+    });
+  } catch(e) { console.warn('EU youth query failed:', e); }
+
+  // Build age lookup by area_code for fast access
+  const ageLookup = {};
+  ageFeatures.forEach(f => {
+    const code = f.properties.area_code;
+    if (code) ageLookup[code] = f.properties.age_pct;
+  });
+
+  // UK/Ireland: polygon features with area_code + total_pop
+  const seen = new Set();
+  densityFeatures.forEach(f => {
+    const code = f.properties.area_code;
+    if (!code || seen.has(code)) return;
+    seen.add(code);
+    try {
+      const centroid = turf.centroid(f);
+      if (turf.booleanPointInPolygon(centroid, isoPolygon)) {
+        const pop = Number(f.properties.total_pop) || 0;
+        totalPop += pop;
+        const agePct = ageLookup[code] !== undefined ? ageLookup[code] : f.properties.age_pct;
+        if (agePct != null && !isNaN(agePct)) {
+          weightedAge += agePct * pop;
+          ageWeightSum += pop;
+        }
+      }
+    } catch(e) {}
+  });
+
+  // EU density: polygon features with density (people/km²) — each cell is 1km²
+  const euSeen = new Set();
+  euDensityFeatures.forEach(f => {
+    if (!f.geometry) return;
+    try {
+      const centroid = turf.centroid(f);
+      const [lng, lat] = centroid.geometry.coordinates;
+      const key = `${lng.toFixed(3)},${lat.toFixed(3)}`;
+      if (euSeen.has(key)) return;
+      euSeen.add(key);
+      if (turf.booleanPointInPolygon(centroid, isoPolygon)) {
+        const pop = Number(f.properties.density) || 0;
+        const inUKIreland = (lng >= -11 && lng <= 2.5 && lat >= 49 && lat <= 61);
+        if (!inUKIreland) totalPop += pop;
+      }
+    } catch(e) {}
+  });
+
+  // EU youth: point features with youth_pop + total_pop per 1km² cell
+  const euYouthSeen = new Set();
+  euYouthFeatures.forEach(f => {
+    if (!f.geometry) return;
+    try {
+      const [lng, lat] = f.geometry.coordinates;
+      const key = `${lng.toFixed(4)},${lat.toFixed(4)}`;
+      if (euYouthSeen.has(key)) return;
+      euYouthSeen.add(key);
+      if (turf.booleanPointInPolygon(turf.point([lng, lat]), isoPolygon)) {
+        euYouthPop += Number(f.properties.youth_pop) || 0;
+      }
+    } catch(e) {}
+  });
+
+  const avgAge = ageWeightSum > 0 ? Math.round(weightedAge / ageWeightSum) : null;
+  return { totalPop, avgAge, euYouthPop };
+}
 
   try {
     densityFeatures = map.querySourceFeatures('ecn-density-src', {
@@ -3391,7 +3490,7 @@ async function updateGymCatchmentStats(isoData, mode) {
 
   statusEl.innerHTML = `20-min ${modeLabel} zone <span class="spinner" style="margin-left:6px"></span>`;
 
-  const { totalPop, avgAge } = await calcCatchmentPop(polygon);
+  const { totalPop, avgAge, euYouthPop } = await calcCatchmentPop(polygon);
 
   if (totalPop === 0) {
     statusEl.textContent = `20-min ${modeLabel} zone`;
@@ -3400,6 +3499,24 @@ async function updateGymCatchmentStats(isoData, mode) {
 
   const gymCount = countGymsInPolygon(polygon);
   const gymStr   = gymCount === 1 ? '1 gym' : `${gymCount} gyms`;
+
+  // UK/Ireland: show avgAge % + derived youth count
+  // EU: show euYouthPop directly from WorldPop vector data
+  const youthRow = avgAge != null
+    ? `<div class="catchment-row">
+        <span class="catchment-label">Aged 7–40</span>
+        <span class="catchment-value">${avgAge}%
+          <span class="catchment-sub">(~${formatPop(Math.round(totalPop * avgAge / 100))} people)</span>
+        </span>
+      </div>`
+    : euYouthPop > 0
+    ? `<div class="catchment-row">
+        <span class="catchment-label">Aged 5–39</span>
+        <span class="catchment-value">~${formatPop(euYouthPop)}
+          <span class="catchment-sub">WorldPop 2023</span>
+        </span>
+      </div>`
+    : '';
 
   statusEl.innerHTML = `
     <div class="catchment-stats">
@@ -3411,12 +3528,7 @@ async function updateGymCatchmentStats(isoData, mode) {
         <span class="catchment-value">~${formatPop(totalPop)}</span>
         <span class="catchment-value" style="color:#1a3a5c;">🏟 ${gymStr}</span>
       </div>
-      ${avgAge != null ? `<div class="catchment-row">
-        <span class="catchment-label">Aged 7–40</span>
-        <span class="catchment-value">${avgAge}%
-          <span class="catchment-sub">(~${formatPop(Math.round(totalPop * avgAge / 100))} people)</span>
-        </span>
-      </div>` : ''}
+      ${youthRow}
     </div>`;
 }
 
@@ -3512,7 +3624,7 @@ async function drawLocationZones(lng, lat) {
     const data  = results[i];
     if (!data || !data.features || !data.features.length) continue;
 
-    const { totalPop, avgAge } = await calcCatchmentPop(data.features[0]);
+    const { totalPop, avgAge, euYouthPop } = await calcCatchmentPop(data.features[0]);
     const popEl  = document.getElementById(`loc-pop-${mode}`);
     const ageEl  = document.getElementById(`loc-age-${mode}`);
     const gymEl  = document.getElementById(`loc-gyms-${mode}`);
@@ -3524,6 +3636,8 @@ async function drawLocationZones(lng, lat) {
       popEl.className = 'loc-zone-pop';
       if (avgAge != null) {
         ageEl.textContent = `${avgAge}% aged 7–40`;
+      } else if (euYouthPop > 0) {
+        ageEl.textContent = `~${formatPop(euYouthPop)} aged 5–39`;
       }
     } else {
       popEl.textContent = 'No data';
