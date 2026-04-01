@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ECN Pro — Gym Map V4 (UK and Europe)</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
-<script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -326,6 +326,8 @@
   #density-legend.visible { display: block; }
   #degurba-legend { display: none; }
   #degurba-legend.visible { display: block; }
+  #euyouth-legend { display: none; }
+  #euyouth-legend.visible { display: block; }
   #iso-legend { display: none; }
   #iso-legend.visible { display: block; }
   #roundup-legend { display: none; }
@@ -1216,6 +1218,9 @@
         <p><strong>🧗 Youth Population (7–40)</strong><br>
         Shows the percentage of the population aged 7–40 — the core climbing demographic — at small-area resolution across the UK and Ireland. Darker purple indicates a higher concentration of this age group. Sources: ONS Census 2021 (England and Wales), NRS SAPE mid-2024 (Scotland), NISRA Census 2021 (Northern Ireland, using 15–39 as a proxy due to disclosure rules), CSO Census 2022 (Ireland). Not available for continental Europe due to the age band constraints in EU Regulation 1799/2018.</p>
 
+        <p><strong>🧗 Youth Population (EU)</strong><br>
+        Shows the percentage of the population aged 5–39 per 1km² grid cell across continental Europe — the closest available approximation to the 7–40 climbing demographic. Darker navy indicates a higher concentration of young people. Sourced from WorldPop Global2 R2025A (2023), a peer-reviewed dataset produced by the University of Southampton incorporating the 2020 census round, AI-derived building footprints and UN World Population Prospects 2024 national totals. Licensed under CC BY 4.0.</p>
+
         <p><strong>👥 Population Density</strong><br>
         Shows population per km² across the UK, Ireland and continental Europe. UK and Ireland use small-area census data for high precision. European coverage uses the Eurostat GEOSTAT 2021 census grid at 1km² resolution, covering EU27 plus Norway and Switzerland. Pale blue indicates low density, deep navy indicates high density (&gt;10,000 per km²).</p>
 
@@ -1380,6 +1385,9 @@
   </label>
   <label class="layer-option" id="lopt-degurba">
     <input type="radio" name="maplayer" value="degurba" onchange="setMapLayer('degurba')"> 🏙️ Market Classification
+  </label>
+  <label class="layer-option" id="lopt-euyouth">
+    <input type="radio" name="maplayer" value="euyouth" onchange="setMapLayer('euyouth')"> 🧗 Youth Population (EU)
   </label>
   <hr class="layer-divider">
   <p class="layer-note">ⓘ Building types: OpenStreetMap. Deprivation: UK & Ireland indices, normalised within each nation. Youth population: % aged 7–40 (core climbing catchment). See legend for dataset dates.</p>
@@ -1581,6 +1589,19 @@
         <p style="font-size:0.67rem;color:var(--stone);line-height:1.6;margin:0">🌍 Eurostat GISCO</p>
         <p style="font-size:0.67rem;color:var(--stone);line-height:1.6;margin:0">Degree of Urbanisation 2021</p>
         <p style="font-size:0.67rem;color:var(--stone);line-height:1.6;margin:0">© EuroGeographics</p>
+      </div>
+    </div>
+    <div id="euyouth-legend">
+      <h5>Youth Population (EU)</h5>
+      <div class="bleg-row"><div class="bleg-swatch" style="background:#0f172a"></div> High (&gt;45%)</div>
+      <div class="bleg-row"><div class="bleg-swatch" style="background:#1e3a6e"></div> </div>
+      <div class="bleg-row"><div class="bleg-swatch" style="background:#2563ab"></div> </div>
+      <div class="bleg-row"><div class="bleg-swatch" style="background:#60a5fa"></div> </div>
+      <div class="bleg-row"><div class="bleg-swatch" style="background:#dbeafe"></div> Low (&lt;25%)</div>
+      <div style="margin-top:8px;border-top:1px solid rgba(0,0,0,0.08);padding-top:6px;">
+        <p style="font-size:0.67rem;color:var(--stone);line-height:1.6;margin:0">Ages 5–39 as % of population</p>
+        <p style="font-size:0.67rem;color:var(--stone);line-height:1.6;margin:0">🌍 WorldPop Global2 R2025A, 2023</p>
+        <p style="font-size:0.67rem;color:var(--stone);line-height:1.6;margin:0">University of Southampton. CC BY 4.0</p>
       </div>
     </div>
   </div>
@@ -2338,6 +2359,7 @@ map.on('load', () => {
   addAgeLayer();
   addDensityLayer();
   addDegurbaLayer();
+  addEuYouthLayer();
 });
 
 // ── LAYERS PANEL ───────────────────────────────────────────────
@@ -2866,6 +2888,7 @@ function setMapLayer(layer) {
   document.getElementById('age-legend').classList.toggle('visible', layer === 'age');
   document.getElementById('density-legend').classList.toggle('visible', layer === 'density');
   document.getElementById('degurba-legend').classList.toggle('visible', layer === 'degurba');
+  document.getElementById('euyouth-legend').classList.toggle('visible', layer === 'euyouth');
 
   // Toggle map layers
   const buildingIds = ['ecn-landuse-fill', 'ecn-building-fill'];
@@ -2892,6 +2915,8 @@ function setMapLayer(layer) {
     map.setLayoutProperty('ecn-degurba-fill', 'visibility', layer === 'degurba' ? 'visible' : 'none');
   if (map.getLayer('ecn-degurba-line'))
     map.setLayoutProperty('ecn-degurba-line', 'visibility', layer === 'degurba' ? 'visible' : 'none');
+  if (map.getLayer('ecn-euyouth-raster'))
+    map.setLayoutProperty('ecn-euyouth-raster', 'visibility', layer === 'euyouth' ? 'visible' : 'none');
 }
 
 // ── BUILDING TYPE MAP LAYERS ────────────────────────────────────
@@ -3215,7 +3240,41 @@ function addDegurbaLayer() {
   }, 'ecn-imd-fill');
 }
 
-// ── CATCHMENT POPULATION COUNTER ─────────────────────────────────
+// ── EU YOUTH POPULATION (WorldPop Global2) ────────────────────────
+const EU_YOUTH_TILESET      = 'euroclimbingnews.dc9sw72t';
+const EU_YOUTH_SOURCE_LAYER = 'europe_youth_pct_uint8-3v2bkh';
+
+function addEuYouthLayer() {
+  map.addSource('ecn-euyouth-src', {
+    type: 'raster',
+    url: `mapbox://${EU_YOUTH_TILESET}`,
+    tileSize: 256,
+  });
+
+  map.addLayer({
+    id:     'ecn-euyouth-raster',
+    type:   'raster',
+    source: 'ecn-euyouth-src',
+    layout: { visibility: 'none' },
+    paint: {
+      'raster-opacity': 0.75,
+      // Colour ramp: pale blue (low %) → deep navy (high %)
+      // Values 0-100 represent youth % (5-39 age group)
+      // Value 255 is no-data (ocean/uninhabited)
+      'raster-color': [
+        'interpolate', ['linear'], ['raster-value'],
+        0,   '#f0f7ff',
+        25,  '#dbeafe',
+        30,  '#60a5fa',
+        35,  '#2563ab',
+        40,  '#1e3a6e',
+        50,  '#0f172a',
+        254, '#0f172a',
+      ],
+      'raster-color-range': [0, 254],
+    }
+  });
+}
 // Uses Turf.js to intersect isochrone polygon with density tileset features
 // querySourceFeatures returns all loaded tiles for the source (viewport must contain isochrone)
 
