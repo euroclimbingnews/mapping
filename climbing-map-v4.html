@@ -3284,13 +3284,14 @@ function addEuYouthLayer() {
     url: `mapbox://${EU_YOUTH_VEC_TILESET}`,
   });
 
-  // Hidden circle layer — needed so querySourceFeatures works
+  // Hidden circle layer — visibility: visible with opacity 0 so tiles
+  // load into memory and querySourceFeatures works for catchment counting
   map.addLayer({
     id:     'ecn-euyouth-vec-points',
     type:   'circle',
     source: 'ecn-euyouth-vec-src',
     'source-layer': EU_YOUTH_VEC_LAYER,
-    layout: { visibility: 'none' },
+    layout: { visibility: 'visible' },
     paint:  { 'circle-radius': 0, 'circle-opacity': 0 }
   });
 }
