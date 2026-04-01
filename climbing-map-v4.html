@@ -3251,27 +3251,35 @@ function addEuYouthLayer() {
     tileSize: 256,
   });
 
+  // raster-value is normalised 0-1 for uint8 rasters (pixel ÷ 255)
+  // Our pixel values: 0-100 = youth %, 255 = nodata (ocean/uninhabited)
+  // Pixel 0   → raster-value 0.000  (0% youth)
+  // Pixel 25  → raster-value 0.098  (25% youth)
+  // Pixel 30  → raster-value 0.118  (30% youth)
+  // Pixel 40  → raster-value 0.157  (40% youth)
+  // Pixel 100 → raster-value 0.392  (100% youth)
+  // Pixel 255 → raster-value 1.000  (nodata → transparent)
   map.addLayer({
     id:     'ecn-euyouth-raster',
     type:   'raster',
     source: 'ecn-euyouth-src',
     layout: { visibility: 'none' },
     paint: {
-      'raster-opacity': 0.75,
-      // Colour ramp: pale blue (low %) → deep navy (high %)
-      // Values 0-100 represent youth % (5-39 age group)
-      // Value 255 is no-data (ocean/uninhabited)
+      'raster-opacity': 0.8,
+      'raster-color-range': [0, 1],
       'raster-color': [
         'interpolate', ['linear'], ['raster-value'],
-        0,   '#f0f7ff',
-        25,  '#dbeafe',
-        30,  '#60a5fa',
-        35,  '#2563ab',
-        40,  '#1e3a6e',
-        50,  '#0f172a',
-        254, '#0f172a',
+        0.000, 'rgba(240, 247, 255, 0.1)',  // ~0%  — near transparent
+        0.090, '#dbeafe',                    // ~23% — pale blue
+        0.110, '#93c5fd',                    // ~28%
+        0.130, '#3b82f6',                    // ~33%
+        0.150, '#2563ab',                    // ~38%
+        0.170, '#1e3a6e',                    // ~43%
+        0.200, '#0f172a',                    // ~51% — deep navy
+        0.392, '#0f172a',                    // 100% max expected value
+        0.990, '#0f172a',                    // keep dark up to nodata
+        1.000, 'rgba(0, 0, 0, 0)',           // nodata (255/255=1.0) — transparent
       ],
-      'raster-color-range': [0, 254],
     }
   });
 }
