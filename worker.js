@@ -45,12 +45,17 @@ export default {
         });
       }
 
-      // Token is valid — serve the Pro map from KV
-      const html = await env.ECN_PRO_CONTENT.get('pro-map');
+      // Token is valid — serve the Pro map from KV with watermark
+      let html = await env.ECN_PRO_CONTENT.get('pro-map');
 
       if (!html) {
         return new Response('Map content not found', { status: 500 });
       }
+
+      // Inject watermark before closing </body> tag
+      const subscriberName = payload.name || 'Subscriber';
+      const subscriberId = payload.sub || '';
+      html = html.replace('</body>', watermarkHTML(subscriberName, subscriberId) + '</body>');
 
       return new Response(html, {
         headers: { 'Content-Type': 'text/html; charset=utf-8' },
@@ -102,10 +107,54 @@ async function validateJWT(token, secret) {
   }
 }
 
+// ─── Watermark ───
+
+function watermarkHTML(name, id) {
+  return `
+  <div id="ecn-watermark" style="
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9999;
+    overflow: hidden;
+  ">
+    <div style="
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-30deg);
+      white-space: nowrap;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 18px;
+      color: rgba(0, 0, 0, 0.06);
+      letter-spacing: 2px;
+      user-select: none;
+      -webkit-user-select: none;
+      line-height: 120px;
+      text-align: center;
+      width: 200%;
+    ">${generateWatermarkPattern(name, id)}</div>
+  </div>`;
+}
+
+function generateWatermarkPattern(name, id) {
+  const shortId = id.substring(0, 8);
+  const line = `ECN Pro — Licensed to ${name} (${shortId})          `;
+  const row = line.repeat(6);
+  const rows = [];
+  for (let i = 0; i < 12; i++) {
+    rows.push(row);
+  }
+  return rows.join('<br>');
+}
+
 // ─── Access Denied Page ───
 
 function accessDeniedHTML() {
-  return `<!DOCTYPE html>
+  return \`<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -168,5 +217,5 @@ function accessDeniedHTML() {
     </span>
   </div>
 </body>
-</html>`;
+</html>\`;
 }
