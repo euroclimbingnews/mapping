@@ -2,7 +2,9 @@ name = "ecn-map"
 compatibility_date = "2025-03-21"
 workers_dev = true
 preview_urls = false
+main = "worker.js"
 
 [assets]
-directory = "."
+directory = "public"
 html_handling = "auto-trailing-slash"
+binding = "ASSETS"
