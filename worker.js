@@ -5,24 +5,10 @@ const PROTECTED_PATHS = [
   '/climbing-map-v4/',
 ];
 
-// Internal files that should never be accessed directly
-const HIDDEN_FILES = [
-  '/_x7k9m2p4.html',
-  '/_x7k9m2p4',
-];
-
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const path = url.pathname;
-
-    // Block direct access to hidden internal files
-    if (HIDDEN_FILES.some(f => path === f || path === f + '/')) {
-      return new Response(accessDeniedHTML(), {
-        status: 403,
-        headers: { 'Content-Type': 'text/html' },
-      });
-    }
 
     // Handle protected Pro map paths
     if (PROTECTED_PATHS.some(p => path === p || path === p + '/')) {
@@ -59,9 +45,16 @@ export default {
         });
       }
 
-      // Token is valid — serve the Pro map from the hidden file
-      const sipUrl = new URL('/_x7k9m2p4.html', url.origin);
-      return env.ASSETS.fetch(new Request(sipUrl, request));
+      // Token is valid — serve the Pro map from KV
+      const html = await env.ECN_PRO_CONTENT.get('pro-map');
+
+      if (!html) {
+        return new Response('Map content not found', { status: 500 });
+      }
+
+      return new Response(html, {
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      });
     }
 
     // Everything else (free map, images, etc.) — serve normally

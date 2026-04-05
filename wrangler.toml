@@ -9,3 +9,7 @@ directory = "public"
 html_handling = "auto-trailing-slash"
 binding = "ASSETS"
 serve_directly = false
+
+[[kv_namespaces]]
+binding = "ECN_PRO_CONTENT"
+id = "ea239ebaaf7947f68fe9a55b6bd7e186"
