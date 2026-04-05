@@ -8,3 +8,4 @@ main = "worker.js"
 directory = "public"
 html_handling = "auto-trailing-slash"
 binding = "ASSETS"
+serve_directly = false
