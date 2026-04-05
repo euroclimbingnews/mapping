@@ -6,6 +6,10 @@ const PROTECTED_PATHS = [
 
 export default {
   async fetch(request, env) {
+    // TEMP TEST — remove after confirming Worker runs
+    if (new URL(request.url).pathname === '/test-auth') {
+      return new Response('Worker is running', { status: 200 });
+    }
     const url = new URL(request.url);
     const path = url.pathname;
 
