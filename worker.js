@@ -1,25 +1,32 @@
-// Paths that require a valid token
+// Public URLs that require authentication
 const PROTECTED_PATHS = [
   '/climbing-map-v4',
   '/climbing-map-v4.html',
+  '/climbing-map-v4/',
+];
+
+// Internal files that should never be accessed directly
+const HIDDEN_FILES = [
+  '/_sip.html',
+  '/_sip',
 ];
 
 export default {
   async fetch(request, env) {
- // TEMP TEST — shows what path the Worker receives
-    if (new URL(request.url).pathname === '/test-auth') {
-      return new Response('Worker is running', { status: 200 });
-    }
-    if (new URL(request.url).searchParams.get('debug') === 'path') {
-      return new Response('Path: ' + new URL(request.url).pathname, { status: 200 });
-    }
     const url = new URL(request.url);
     const path = url.pathname;
 
-    // Check if this path needs protection
-    const isProtected = PROTECTED_PATHS.some(p => path === p || path === p + '/');
+    // Block direct access to hidden internal files
+    if (HIDDEN_FILES.some(f => path === f || path === f + '/')) {
+      return new Response(accessDeniedHTML(), {
+        status: 403,
+        headers: { 'Content-Type': 'text/html' },
+      });
+    }
 
-    if (isProtected) {
+    // Handle protected Pro map paths
+    if (PROTECTED_PATHS.some(p => path === p || path === p + '/')) {
+
       // Check for token in URL param first, then cookie
       let token = url.searchParams.get('token');
       const tokenFromParam = !!token;
@@ -34,14 +41,13 @@ export default {
       const payload = token ? await validateJWT(token, env.JWT_SECRET) : null;
 
       if (!payload) {
-        // Not authenticated — show access denied page
         return new Response(accessDeniedHTML(), {
           status: 403,
           headers: { 'Content-Type': 'text/html' },
         });
       }
 
-      // If token came via URL param, set it as a cookie and redirect to clean URL
+      // If token came via URL param, set cookie and redirect to clean URL
       if (tokenFromParam) {
         url.searchParams.delete('token');
         return new Response(null, {
@@ -52,9 +58,13 @@ export default {
           },
         });
       }
+
+      // Token is valid — serve the Pro map from the hidden file
+      const sipUrl = new URL('/_sip.html', url.origin);
+      return env.ASSETS.fetch(new Request(sipUrl, request));
     }
 
-    // Serve the requested file from static assets
+    // Everything else (free map, images, etc.) — serve normally
     return env.ASSETS.fetch(request);
   },
 };
@@ -91,7 +101,6 @@ async function validateJWT(token, secret) {
       atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'))
     );
 
-    // Check expiry
     if (payload.exp < Math.floor(Date.now() / 1000)) return null;
 
     return payload;
