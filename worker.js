@@ -7,8 +7,8 @@ const PROTECTED_PATHS = [
 
 // Internal files that should never be accessed directly
 const HIDDEN_FILES = [
-  '/_sip.html',
-  '/_sip',
+  '/_x7k9m2p4.html',
+  '/_x7k9m2p4',
 ];
 
 export default {
@@ -60,7 +60,7 @@ export default {
       }
 
       // Token is valid — serve the Pro map from the hidden file
-      const sipUrl = new URL('/_sip.html', url.origin);
+      const sipUrl = new URL('/_x7k9m2p4.html', url.origin);
       return env.ASSETS.fetch(new Request(sipUrl, request));
     }
 
