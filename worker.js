@@ -139,7 +139,7 @@ function watermarkHTML(name, id) {
     + 'white-space:nowrap;'
     + 'font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;'
     + 'font-size:18px;'
-    + 'color:rgba(0,0,0,0.06);'
+    + 'color:rgba(0,0,0,0.05);'
     + 'letter-spacing:2px;'
     + 'user-select:none;'
     + '-webkit-user-select:none;'
