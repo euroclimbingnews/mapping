@@ -5,15 +5,56 @@ var PROTECTED_PATHS = [
   '/climbing-map-v4/',
 ];
 
+// Protected report downloads
+var REPORT_PATHS = {
+  '/reports/market-2025': 'ECN 2025 Market Report.pdf',
+};
+
 export default {
   async fetch(request, env) {
     var url = new URL(request.url);
     var path = url.pathname;
 
-    // Handle protected Pro map paths
+    // ─── Protected reports ───
+    if (REPORT_PATHS[path]) {
+
+      var rToken = url.searchParams.get('token');
+
+      if (!rToken) {
+        var rCookies = request.headers.get('Cookie') || '';
+        var rMatch = rCookies.match(/ecn_token=([^;]+)/);
+        rToken = rMatch ? rMatch[1] : null;
+      }
+
+      var rPayload = rToken ? await validateJWT(rToken, env.JWT_SECRET) : null;
+
+      if (!rPayload) {
+        return new Response(accessDeniedHTML(), {
+          status: 403,
+          headers: { 'Content-Type': 'text/html' },
+        });
+      }
+
+      // Fetch PDF from R2
+      var fileName = REPORT_PATHS[path];
+      var object = await env.PRO_REPORTS.get(fileName);
+
+      if (!object) {
+        return new Response('Report not found', { status: 404 });
+      }
+
+      return new Response(object.body, {
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': 'attachment; filename="' + fileName + '"',
+          'Cache-Control': 'private, no-store',
+        },
+      });
+    }
+
+    // ─── Protected Pro map ───
     if (PROTECTED_PATHS.some(function(p) { return path === p || path === p + '/'; })) {
 
-      // Check for token in URL param first, then cookie
       var token = url.searchParams.get('token');
       var tokenFromParam = !!token;
 
@@ -23,7 +64,6 @@ export default {
         token = match ? match[1] : null;
       }
 
-      // Validate the token
       var payload = token ? await validateJWT(token, env.JWT_SECRET) : null;
 
       if (!payload) {
@@ -33,7 +73,6 @@ export default {
         });
       }
 
-      // If token came via URL param, set cookie and redirect to clean URL
       if (tokenFromParam) {
         url.searchParams.delete('token');
         return new Response(null, {
@@ -45,14 +84,12 @@ export default {
         });
       }
 
-      // Token is valid — serve the Pro map from KV with watermark
       var html = await env.ECN_PRO_CONTENT.get('pro-map');
 
       if (!html) {
         return new Response('Map content not found', { status: 500 });
       }
 
-      // Inject watermark before closing </body> tag
       var subscriberName = payload.name || 'Subscriber';
       var subscriberId = payload.sub || '';
       html = html.replace('</body>', watermarkHTML(subscriberName, subscriberId) + '</body>');
@@ -62,7 +99,7 @@ export default {
       });
     }
 
-    // Everything else (free map, images, etc.) — serve normally
+    // Everything else — serve normally
     return env.ASSETS.fetch(request);
   },
 };
@@ -139,7 +176,7 @@ function watermarkHTML(name, id) {
     + 'white-space:nowrap;'
     + 'font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;'
     + 'font-size:18px;'
-    + 'color:rgba(0,0,0,0.05);'
+    + 'color:rgba(0,0,0,0.06);'
     + 'letter-spacing:2px;'
     + 'user-select:none;'
     + '-webkit-user-select:none;'
