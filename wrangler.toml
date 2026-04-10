@@ -13,3 +13,7 @@ serve_directly = false
 [[kv_namespaces]]
 binding = "ECN_PRO_CONTENT"
 id = "ea239ebaaf7947f68fe9a55b6bd7e186"
+
+[[r2_buckets]]
+binding = "PRO_REPORTS"
+bucket_name = "ecn-pro-reports"
