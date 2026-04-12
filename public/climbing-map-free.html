@@ -430,9 +430,8 @@
   /* ── DRAG HANDLE ─────────────────────────────────────── */
   #panel-drag-handle {
     display: none;
-    width: 48px; height: 6px; border-radius: 3px;
-    background: var(--sand); margin: 12px auto 0; flex-shrink: 0;
-    cursor: grab;
+    width: 36px; height: 4px; border-radius: 2px;
+    background: var(--sand); margin: 10px auto 0; flex-shrink: 0;
   }
 
   /* ── GYM MARKERS ────────────────────────────────────── */
@@ -1248,7 +1247,7 @@ function showPanel(p, idx) {
 
   const priceEl = document.getElementById('panel-price');
   priceEl.innerHTML = (p.price && p.price !== '')
-    ? `<div class="price-badge">Peak entry: £${parseFloat(p.price).toFixed(2)}</div>`
+    ? `<div class="price-badge">Day pass: ${p.price}</div>`
     : `<div class="price-badge unknown">Price not listed</div>`;
 
   const linksEl = document.getElementById('panel-links');
