@@ -5,15 +5,6 @@ var PROTECTED_PATHS = [
   '/climbing-map-v4/',
 ];
 
-// Public demo map — no auth required
-if (url.pathname === '/demo') {
-  const html = await env.ECN_PRO_CONTENT.get('demo-map');
-  if (!html) return new Response('Not found', { status: 404 });
-  return new Response(html, {
-    headers: { 'Content-Type': 'text/html;charset=UTF-8' }
-  });
-}
-
 // Protected report downloads
 var REPORT_PATHS = {
   '/reports/market-2025': 'ECN 2025 Market Report.pdf',
@@ -23,6 +14,15 @@ export default {
   async fetch(request, env) {
     var url = new URL(request.url);
     var path = url.pathname;
+
+    // ─── Public demo map — no auth required ───
+    if (path === '/demo') {
+      var demoHtml = await env.ECN_PRO_CONTENT.get('demo-map');
+      if (!demoHtml) return new Response('Not found', { status: 404 });
+      return new Response(demoHtml, {
+        headers: { 'Content-Type': 'text/html;charset=UTF-8' },
+      });
+    }
 
     // ─── Protected reports ───
     if (REPORT_PATHS[path]) {
