@@ -229,10 +229,6 @@
     font-family: 'Playfair Display', serif;
     font-size: 1.3rem; margin: 0;
   }
-  #guide-modal-header p {
-    font-size: 0.75rem; color: rgba(255,255,255,0.7);
-    margin: 4px 0 0;
-  }
   #guide-close {
     width: 32px; height: 32px; border-radius: 50%;
     background: rgba(255,255,255,0.15); border: none;
@@ -841,6 +837,7 @@
       </div>
 
       <button id="add-gym-submit" onclick="submitAddGym()">Submit for Review</button>
+      <button id="add-another-btn" onclick="resetAddGymForm()" style="display:none; width:100%; padding:11px; border-radius:8px; background:#2a4520; border:none; color:white; font-size:0.88rem; font-weight:600; font-family:'DM Sans',sans-serif; cursor:pointer; margin-top:8px; transition:background 0.15s;">+ Add Another Gym</button>
       <p style="font-size:0.68rem;color:var(--stone);margin-top:10px;line-height:1.5;text-align:center;">
         All submissions are reviewed by the ECN team before appearing on the map. Fields marked * are required.
       </p>
@@ -853,8 +850,7 @@
   <div id="guide-modal">
     <div id="guide-modal-header">
       <div>
-        <h2 data-i18n="guide_title">ECN — Map User Guide</h2>
-        <p data-i18n="guide_subtitle">Everything you need to get started with the free ECN Gym Map</p>
+        <h2 data-i18n="guide_title">ECN Gym Map Guide</h2>
       </div>
       <button id="guide-close" onclick="toggleGuide()">✕</button>
     </div>
@@ -1503,7 +1499,10 @@ async function submitAddGym() {
   try {
     await fetch(UPDATE_SHEET_URL, { method: 'POST', mode: 'no-cors', redirect: 'follow', body: payload });
     showAddGymStatus('success', t('addgym_success'));
-    btn.textContent = 'Submitted';
+    btn.textContent = t('addgym_submit');
+    btn.style.display = 'none';
+    document.getElementById('add-another-btn').style.display = 'block';
+    document.getElementById('add-another-btn').textContent = t('add_another');
     document.getElementById('add-gym-form-body').scrollTop = 0;
   } catch(e) {
     showAddGymStatus('error', t('addgym_error'));
@@ -1732,6 +1731,7 @@ var TRANSLATIONS = {
     "region": "UK & Europe",
     "search_placeholder": "Search gyms…",
     "btn_guide": "? Guide",
+    "guide_title": "ECN Gym Map Guide",
     "btn_add_gym": "+ Add Gym",
     "filter_all": "All gyms",
     "filter_bouldering": "🪨 Bouldering",
@@ -1782,6 +1782,7 @@ var TRANSLATIONS = {
     "addgym_notes": "Notes",
     "addgym_submitter": "Your name / contact (optional)",
     "addgym_submit": "Submit for Review",
+    "add_another": "+ Add Another Gym",
     "addgym_disclaimer": "All submissions are reviewed by the ECN team before appearing on the map. Fields marked * are required.",
     "addgym_success": "✓ Thank you! Your submission has been received and will be reviewed by the ECN team.",
     "addgym_error": "Something went wrong. Please try again or email callum@euroclimbing.news",
@@ -1800,6 +1801,7 @@ var TRANSLATIONS = {
     "region": "Royaume-Uni et Europe",
     "search_placeholder": "Rechercher une salle…",
     "btn_guide": "? Guide",
+    "guide_title": "Guide de la Carte ECN",
     "btn_add_gym": "+ Ajouter",
     "filter_all": "Toutes",
     "filter_bouldering": "🪨 Bloc",
@@ -1850,6 +1852,7 @@ var TRANSLATIONS = {
     "addgym_notes": "Notes",
     "addgym_submitter": "Votre nom / contact (facultatif)",
     "addgym_submit": "Soumettre pour examen",
+    "add_another": "+ Ajouter une autre salle",
     "addgym_disclaimer": "Toutes les soumissions sont vérifiées par l'équipe ECN avant publication. Les champs marqués * sont obligatoires.",
     "addgym_success": "✓ Merci ! Votre soumission a été reçue et sera examinée par l'équipe ECN.",
     "addgym_error": "Un problème est survenu. Veuillez réessayer ou écrire à callum@euroclimbing.news",
@@ -1868,6 +1871,7 @@ var TRANSLATIONS = {
     "region": "UK und Europa",
     "search_placeholder": "Halle suchen…",
     "btn_guide": "? Anleitung",
+    "guide_title": "ECN Kletterhallen-Kartenführer",
     "btn_add_gym": "+ Hinzufügen",
     "filter_all": "Alle",
     "filter_bouldering": "🪨 Bouldern",
@@ -1918,6 +1922,7 @@ var TRANSLATIONS = {
     "addgym_notes": "Anmerkungen",
     "addgym_submitter": "Ihr Name / Kontakt (optional)",
     "addgym_submit": "Zur Prüfung einreichen",
+    "add_another": "+ Weitere Halle hinzufügen",
     "addgym_disclaimer": "Alle Einreichungen werden vom ECN-Team geprüft, bevor sie auf der Karte erscheinen. Mit * markierte Felder sind Pflichtfelder.",
     "addgym_success": "✓ Vielen Dank! Ihre Einreichung wurde erhalten und wird vom ECN-Team geprüft.",
     "addgym_error": "Es ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut oder schreiben Sie an callum@euroclimbing.news",
@@ -1936,6 +1941,7 @@ var TRANSLATIONS = {
     "region": "UK ed Europa",
     "search_placeholder": "Cerca palestra…",
     "btn_guide": "? Guida",
+    "guide_title": "Guida alla Mappa ECN",
     "btn_add_gym": "+ Aggiungi",
     "filter_all": "Tutte",
     "filter_bouldering": "🪨 Boulder",
@@ -1986,6 +1992,7 @@ var TRANSLATIONS = {
     "addgym_notes": "Note",
     "addgym_submitter": "Nome / contatto (opzionale)",
     "addgym_submit": "Invia per revisione",
+    "add_another": "+ Aggiungi un\'altra palestra",
     "addgym_disclaimer": "Tutte le segnalazioni vengono verificate dal team ECN prima della pubblicazione. I campi contrassegnati con * sono obbligatori.",
     "addgym_success": "✓ Grazie! La tua segnalazione è stata ricevuta e verrà esaminata dal team ECN.",
     "addgym_error": "Si è verificato un errore. Riprova o scrivi a callum@euroclimbing.news",
@@ -2004,6 +2011,7 @@ var TRANSLATIONS = {
     "region": "Storbritannia og Europa",
     "search_placeholder": "Søk etter hall…",
     "btn_guide": "? Veiledning",
+    "guide_title": "ECN Kartguide",
     "btn_add_gym": "+ Legg til",
     "filter_all": "Alle",
     "filter_bouldering": "🪨 Buldring",
@@ -2054,6 +2062,7 @@ var TRANSLATIONS = {
     "addgym_notes": "Merknader",
     "addgym_submitter": "Ditt navn / kontakt (valgfritt)",
     "addgym_submit": "Send til gjennomgang",
+    "add_another": "+ Legg til en annen hall",
     "addgym_disclaimer": "Alle innsendinger gjennomgås av ECN-teamet før de vises på kartet. Felt merket med * er obligatoriske.",
     "addgym_success": "✓ Takk! Innsendingen din er mottatt og vil bli gjennomgått av ECN-teamet.",
     "addgym_error": "Noe gikk galt. Prøv igjen eller send e-post til callum@euroclimbing.news",
@@ -2072,6 +2081,7 @@ var TRANSLATIONS = {
     "region": "Reino Unido y Europa",
     "search_placeholder": "Buscar rocódromo…",
     "btn_guide": "? Guía",
+    "guide_title": "Guía del Mapa ECN",
     "btn_add_gym": "+ Añadir",
     "filter_all": "Todos",
     "filter_bouldering": "🪨 Búlder",
@@ -2122,6 +2132,7 @@ var TRANSLATIONS = {
     "addgym_notes": "Notas",
     "addgym_submitter": "Tu nombre / contacto (opcional)",
     "addgym_submit": "Enviar para revisión",
+    "add_another": "+ Añadir otro rocódromo",
     "addgym_disclaimer": "Todas las propuestas son revisadas por el equipo ECN antes de publicarse. Los campos marcados con * son obligatorios.",
     "addgym_success": "✓ ¡Gracias! Tu propuesta ha sido recibida y será revisada por el equipo ECN.",
     "addgym_error": "Algo salió mal. Inténtalo de nuevo o escribe a callum@euroclimbing.news",
@@ -2244,6 +2255,32 @@ document.addEventListener('DOMContentLoaded', function() {
     if (saved && TRANSLATIONS[saved]) setLang(saved);
   } catch(e) {}
 });
+
+
+// ─── RESET ADD GYM FORM ────────────────────────────────────────
+function resetAddGymForm() {
+  document.getElementById('ag-name').value = '';
+  document.getElementById('ag-address').value = '';
+  document.getElementById('ag-website').value = '';
+  document.getElementById('ag-phone').value = '';
+  document.getElementById('ag-price').value = '';
+  document.getElementById('ag-type').value = '';
+  document.getElementById('ag-notes').value = '';
+  document.getElementById('ag-submitter').value = '';
+  document.querySelectorAll('#ag-facilities input').forEach(function(cb) {
+    cb.checked = false;
+    cb.closest('.add-gym-check').classList.remove('checked');
+  });
+  var status = document.getElementById('add-gym-status');
+  status.className = '';
+  status.textContent = '';
+  var btn = document.getElementById('add-gym-submit');
+  btn.disabled = false;
+  btn.textContent = t('addgym_submit');
+  btn.style.display = '';
+  document.getElementById('add-another-btn').style.display = 'none';
+  document.getElementById('add-gym-form-body').scrollTop = 0;
+}
 
 loadGyms();
 
