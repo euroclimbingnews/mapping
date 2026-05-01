@@ -280,6 +280,34 @@
   }
 
 
+
+  /* ── LANGUAGE MENU ─────────────────────────────────── */
+  #lang-btn {
+    padding: 6px 14px; border-radius: 6px;
+    background: rgba(255,255,255,0.12); border: 1.5px solid rgba(255,255,255,0.25);
+    color: var(--cream); font-size: 0.78rem; font-weight: 600;
+    font-family: 'DM Sans', sans-serif; cursor: pointer;
+    transition: all 0.15s; white-space: nowrap;
+  }
+  #lang-btn:hover { background: rgba(255,255,255,0.22); }
+  #lang-wrap { position: relative; }
+  #lang-dropdown {
+    display: none; position: absolute; top: calc(100% + 6px); right: 0;
+    background: var(--white); border-radius: 8px;
+    box-shadow: var(--shadow); overflow: hidden; min-width: 140px;
+    z-index: 200;
+  }
+  #lang-dropdown.open { display: block; }
+  .lang-opt {
+    display: block; width: 100%; padding: 10px 16px;
+    font-size: 0.82rem; font-family: 'DM Sans', sans-serif;
+    color: #1a1a18; cursor: pointer; transition: background 0.1s;
+    border: none; background: var(--white); text-align: left;
+  }
+  .lang-opt:hover { background: var(--warm); }
+  .lang-opt + .lang-opt { border-top: 1px solid #eee; }
+  .lang-opt.active { font-weight: 700; color: #000099; }
+
   /* Search bar in header */
   #search-wrap {
     flex: 1; max-width: 300px; margin-left: auto;
@@ -732,24 +760,24 @@
   <div id="add-gym-modal">
     <div id="add-gym-modal-header">
       <div>
-        <h2>➕ Add a Gym</h2>
-        <p>Submit a new climbing facility for review by the ECN team</p>
+        <h2 data-i18n="addgym_title">➕ Add a Gym</h2>
+        <p data-i18n="addgym_subtitle">Submit a new climbing facility for review by the ECN team</p>
       </div>
       <button id="add-gym-modal-close" onclick="toggleAddGym()">✕</button>
     </div>
     <div id="add-gym-form-body">
       <div id="add-gym-status"></div>
 
-      <div class="add-gym-section-label">Gym Details</div>
+      <div class="add-gym-section-label" data-i18n="addgym_details">Gym Details</div>
       <div class="add-gym-row full">
         <div class="add-gym-field">
-          <label>Gym Name *</label>
+          <label data-i18n="addgym_name">Gym Name *</label>
           <input type="text" id="ag-name" placeholder="e.g. The Climbing Hangar">
         </div>
       </div>
       <div class="add-gym-row full">
         <div class="add-gym-field">
-          <label>Full Address *</label>
+          <label data-i18n="addgym_address">Full Address *</label>
           <input type="text" id="ag-address" placeholder="Street, City, Postcode">
         </div>
       </div>
@@ -765,7 +793,7 @@
       </div>
       <div class="add-gym-row">
         <div class="add-gym-field">
-          <label>Entry Price</label>
+          <label data-i18n="addgym_price">Entry Price</label>
           <input type="text" id="ag-price" placeholder="e.g. £12 day pass">
         </div>
         <div class="add-gym-field">
@@ -781,7 +809,7 @@
         </div>
       </div>
 
-      <div class="add-gym-section-label">Facilities</div>
+      <div class="add-gym-section-label" data-i18n="addgym_facilities">Facilities</div>
       <div class="add-gym-checkboxes" id="ag-facilities">
         <label class="add-gym-check"><input type="checkbox" value="Bouldering">🪨 Bouldering</label>
         <label class="add-gym-check"><input type="checkbox" value="Ropes">🧗 Ropes</label>
@@ -798,10 +826,10 @@
         <label class="add-gym-check"><input type="checkbox" value="Parking">🅿️ Parking</label>
       </div>
 
-      <div class="add-gym-section-label">Additional Info</div>
+      <div class="add-gym-section-label" data-i18n="addgym_additional">Additional Info</div>
       <div class="add-gym-row full">
         <div class="add-gym-field">
-          <label>Notes</label>
+          <label data-i18n="addgym_notes">Notes</label>
           <textarea id="ag-notes" rows="3" placeholder="Opening hours, membership options, anything else useful…"></textarea>
         </div>
       </div>
@@ -825,8 +853,8 @@
   <div id="guide-modal">
     <div id="guide-modal-header">
       <div>
-        <h2>ECN — Map User Guide</h2>
-        <p>Everything you need to get started with the free ECN Gym Map</p>
+        <h2 data-i18n="guide_title">ECN — Map User Guide</h2>
+        <p data-i18n="guide_subtitle">Everything you need to get started with the free ECN Gym Map</p>
       </div>
       <button id="guide-close" onclick="toggleGuide()">✕</button>
     </div>
@@ -883,12 +911,23 @@
 
 <!-- HEADER -->
 <div id="header">
-  <h1>ECN <span>Gym Map</span></h1>
-  <div class="header-pill">UK &amp; Europe</div>
+  <h1 id="header-title">ECN <span>Gym Map</span></h1>
+  <div class="header-pill" data-i18n="region">UK &amp; Europe</div>
   <div id="search-wrap">
     <span id="search-icon">⌕</span>
     <input id="gym-search" type="text" placeholder="Search gyms…" autocomplete="off">
     <div id="search-results"></div>
+  </div>
+  <div id="lang-wrap">
+    <button id="lang-btn" onclick="toggleLangMenu(event)">🌐 EN</button>
+    <div id="lang-dropdown">
+      <div class="lang-opt active" onclick="setLang('en')">🇬🇧 English</div>
+      <div class="lang-opt" onclick="setLang('fr')">🇫🇷 Français</div>
+      <div class="lang-opt" onclick="setLang('de')">🇩🇪 Deutsch</div>
+      <div class="lang-opt" onclick="setLang('it')">🇮🇹 Italiano</div>
+      <div class="lang-opt" onclick="setLang('no')">🇳🇴 Norsk</div>
+      <div class="lang-opt" onclick="setLang('es')">🇪🇸 Español</div>
+    </div>
   </div>
   <button id="guide-btn" onclick="toggleGuide()">? Guide</button>
   <button id="add-gym-btn" onclick="toggleAddGym()">+ Add Gym</button>
@@ -902,17 +941,17 @@
 
 <!-- FILTER BAR -->
 <div id="filters">
-  <button class="filter-btn active" data-filter="all">All gyms</button>
-  <button class="filter-btn" data-filter="boulders">🪨 Bouldering</button>
-  <button class="filter-btn" data-filter="ropes">🧗 Ropes</button>
-  <button class="filter-btn" data-filter="autobelay">⚙️ Autobelay</button>
-  <button class="filter-btn" data-filter="cafe">☕ Café</button>
-  <button class="filter-btn" data-filter="moonboard">🌙 Moonboard</button>
-  <button class="filter-btn" data-filter="kilter">🟠 Kilter</button>
-  <button class="filter-btn" data-filter="tension">🔵 Tension</button>
-  <button class="filter-btn" data-filter="woody">🟤 Woody</button>
-  <button class="filter-btn" data-filter="kids">👶 Kids Zone</button>
-  <button class="filter-btn" data-filter="speed">⚡ Speed Wall</button>
+  <button class="filter-btn active" data-filter="all" data-i18n="filter_all">All gyms</button>
+  <button class="filter-btn" data-filter="boulders" data-i18n="filter_bouldering">🪨 Bouldering</button>
+  <button class="filter-btn" data-filter="ropes" data-i18n="filter_ropes">🧗 Ropes</button>
+  <button class="filter-btn" data-filter="autobelay" data-i18n="filter_autobelay">⚙️ Autobelay</button>
+  <button class="filter-btn" data-filter="cafe" data-i18n="filter_cafe">☕ Café</button>
+  <button class="filter-btn" data-filter="moonboard" data-i18n="filter_moonboard">🌙 Moonboard</button>
+  <button class="filter-btn" data-filter="kilter" data-i18n="filter_kilter">🟠 Kilter</button>
+  <button class="filter-btn" data-filter="tension" data-i18n="filter_tension">🔵 Tension</button>
+  <button class="filter-btn" data-filter="woody" data-i18n="filter_woody">🟤 Woody</button>
+  <button class="filter-btn" data-filter="kids" data-i18n="filter_kids">👶 Kids Zone</button>
+  <button class="filter-btn" data-filter="speed" data-i18n="filter_speed">⚡ Speed Wall</button>
 </div>
 
 <!-- MAP -->
@@ -932,8 +971,8 @@
     </div>
   </div>
   <div id="panel-tabs">
-    <button class="panel-tab active" id="tab-info"   onclick="switchPanelTab('info')">📋 Info</button>
-    <button class="panel-tab"        id="tab-update" onclick="switchPanelTab('update')">✏️ Update Info</button>
+    <button class="panel-tab active" id="tab-info" data-i18n="tab_info" onclick="switchPanelTab('info')">📋 Info</button>
+    <button class="panel-tab"        id="tab-update" data-i18n="tab_update" onclick="switchPanelTab('update')">✏️ Update Info</button>
   </div>
 
   <!-- INFO TAB -->
@@ -942,7 +981,7 @@
     <div id="panel-price"></div>
     <div id="panel-links"></div>
     <div class="transport-section">
-      <h4>Public Transport Nearby</h4>
+      <h4 data-i18n="transport_heading">Public Transport Nearby</h4>
       <div id="panel-transport" class="transport-pills"></div>
       <div id="transport-stops-status"></div>
     </div>
@@ -954,34 +993,34 @@
   <div class="panel-tab-content" id="tab-content-update">
   <div id="update-form">
     <div id="update-status"></div>
-    <h4>Suggest a correction for <span id="update-gym-name" style="font-style:italic;text-transform:none;letter-spacing:0"></span></h4>
+    <h4><span data-i18n="update_heading">Suggest a correction for </span><span id="update-gym-name" style="font-style:italic;text-transform:none;letter-spacing:0"></span></h4>
 
     <div class="update-field">
-      <label>Name correction</label>
+      <label data-i18n="update_name">Name correction</label>
       <input type="text" id="uf-name" placeholder="Corrected gym name…">
     </div>
     <div class="update-field">
-      <label>Address / location fix</label>
+      <label data-i18n="update_address">Address / location fix</label>
       <input type="text" id="uf-address" placeholder="Corrected address…">
     </div>
     <div class="update-field">
-      <label>Website / contact update</label>
+      <label data-i18n="update_website">Website / contact update</label>
       <input type="text" id="uf-website" placeholder="https://…">
     </div>
     <div class="update-field">
-      <label>Entry price update</label>
+      <label data-i18n="update_price">Entry price update</label>
       <input type="text" id="uf-price" placeholder="e.g. £12 day pass, £8 student…">
     </div>
     <div class="closed-row">
       <input type="checkbox" id="uf-closed">
-      <label for="uf-closed">⚠️ Report this gym as permanently closed</label>
+      <label for="uf-closed" data-i18n="update_closed">⚠️ Report this gym as permanently closed</label>
     </div>
     <div class="update-field">
-      <label>Other notes</label>
+      <label data-i18n="update_notes">Other notes</label>
       <textarea id="uf-notes" rows="3" placeholder="Anything else we should know…"></textarea>
     </div>
 
-    <button id="update-submit" onclick="submitUpdate()">Send Update</button>
+    <button id="update-submit" onclick="submitUpdate()" data-i18n="update_submit">Send Update</button>
     <p style="font-size:0.68rem;color:var(--stone);margin-top:12px;line-height:1.5;">
       Updates are reviewed by the ECN team before any changes are made. Thank you for keeping the map accurate.
     </p>
@@ -1126,7 +1165,7 @@ function showError(msg) {
 
 // ── FETCH DATA ────────────────────────────────────────────
 async function loadGyms() {
-  showLoading('Loading gym data…');
+  showLoading(t('loading_msg'));
   try {
     const resp = await fetch(SHEET_CSV_URL);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
@@ -1135,6 +1174,7 @@ async function loadGyms() {
     if (GYMS.features.length === 0) throw new Error('No gyms parsed — check column headers');
     console.log('GYMS loaded:', GYMS.features.length, '| map.loaded():', map.loaded());
     document.getElementById('visible-count').textContent = GYMS.features.length;
+    updateCountBadge();
     hideLoading();
     if (map.loaded()) {
       console.log('Building markers immediately');
@@ -1237,7 +1277,7 @@ function showPanel(p, idx) {
       f.properties.chain && f.properties.chain.trim() === chainName
     ).length;
     chainBadge.textContent = '🔗 ' + chainName;
-    chainBtn.textContent   = 'Show all ' + chainCount + ' location' + (chainCount !== 1 ? 's' : '');
+    chainBtn.textContent   = t('chain_show') + chainCount + (chainCount !== 1 ? t('chain_suffix_p') : t('chain_suffix_s'));
     chainBtn.dataset.chain = chainName;
     chainWrap.style.display = 'flex';
   } else {
@@ -1247,8 +1287,8 @@ function showPanel(p, idx) {
 
   const priceEl = document.getElementById('panel-price');
   priceEl.innerHTML = (p.price && p.price !== '')
-    ? `<div class="price-badge">Day pass: ${p.price}</div>`
-    : `<div class="price-badge unknown">Price not listed</div>`;
+    ? `<div class="price-badge">${t('price_prefix')}${p.price}</div>`
+    : `<div class="price-badge unknown">${t('price_unknown')}</div>`;
 
   const linksEl = document.getElementById('panel-links');
   let linksHtml = '';
@@ -1261,7 +1301,7 @@ function showPanel(p, idx) {
     const modes = p.transport.split(',').map(t => t.trim()).filter(Boolean);
     transEl.innerHTML = modes.map(m => `<span class="transport-pill">${transportLabel(m)}</span>`).join('');
   } else {
-    transEl.innerHTML = `<span class="transport-pill">No public transport listed</span>`;
+    transEl.innerHTML = `<span class="transport-pill">${t('transport_none')}</span>`;
   }
   document.getElementById('transport-stops-status').textContent = '';
 
@@ -1283,7 +1323,7 @@ function showPanel(p, idx) {
   document.getElementById('amenity-grid').innerHTML = amenities
     .filter(a => p[a.key] === 'Y' || p[a.key] === 'AUTOBELAY')
     .map(a => `<div class="tag yes">✓ ${a.label}</div>`)
-    .join('') || '<div style="font-size:0.78rem;color:var(--stone)">No amenity data available</div>';
+    .join('') || '<div style="font-size:0.78rem;color:var(--stone)">' + t('amenity_none') + '</div>';
 
   document.getElementById('panel').classList.add('open');
   document.body.classList.add('panel-open-mobile');
@@ -1380,7 +1420,7 @@ function filterByChain() {
 
   // Update button to allow clearing
   const btn = document.getElementById('chain-filter-btn');
-  btn.textContent = '✕ Clear chain view';
+  btn.textContent = t('chain_clear');
   btn.onclick = clearChainHighlight;
 }
 
@@ -1396,7 +1436,7 @@ function clearChainHighlight() {
     const chainCount = chainName ? GYMS.features.filter(f =>
       f.properties.chain && f.properties.chain.trim() === chainName
     ).length : 0;
-    btn.textContent = 'Show all ' + chainCount + ' location' + (chainCount !== 1 ? 's' : '');
+    btn.textContent = t('chain_show') + chainCount + (chainCount !== 1 ? t('chain_suffix_p') : t('chain_suffix_s'));
     btn.onclick = filterByChain;
   }
 }
@@ -1440,7 +1480,7 @@ async function submitAddGym() {
   const name    = document.getElementById('ag-name').value.trim();
   const address = document.getElementById('ag-address').value.trim();
   if (!name || !address) {
-    showAddGymStatus('error', 'Please fill in at least the gym name and address.');
+    showAddGymStatus('error', t('addgym_empty'));
     return;
   }
   const facilities = [...document.querySelectorAll('#ag-facilities input:checked')]
@@ -1462,11 +1502,11 @@ async function submitAddGym() {
   btn.textContent = 'Sending…';
   try {
     await fetch(UPDATE_SHEET_URL, { method: 'POST', mode: 'no-cors', redirect: 'follow', body: payload });
-    showAddGymStatus('success', '✓ Thank you! Your submission has been received and will be reviewed by the ECN team.');
+    showAddGymStatus('success', t('addgym_success'));
     btn.textContent = 'Submitted';
     document.getElementById('add-gym-form-body').scrollTop = 0;
   } catch(e) {
-    showAddGymStatus('error', 'Something went wrong. Please try again or email callum@euroclimbing.news');
+    showAddGymStatus('error', t('addgym_error'));
     btn.disabled = false;
     btn.textContent = 'Submit for Review';
   }
@@ -1510,7 +1550,7 @@ async function submitUpdate() {
   const isClosed  = document.getElementById('uf-closed').checked;
   const notes     = document.getElementById('uf-notes').value.trim();
   if (!nameCorr && !addrCorr && !webCorr && !priceCorr && !isClosed && !notes) {
-    showUpdateStatus('error', 'Please fill in at least one field before submitting.');
+    showUpdateStatus('error', t('update_empty'));
     return;
   }
   const btn = document.getElementById('update-submit');
@@ -1523,11 +1563,11 @@ async function submitUpdate() {
   });
   try {
     await fetch(UPDATE_SHEET_URL, { method: 'POST', mode: 'no-cors', redirect: 'follow', body: payload });
-    showUpdateStatus('success', 'Update received - thank you! The ECN team will review it shortly.');
+    showUpdateStatus('success', t('update_success'));
     btn.textContent = 'Sent';
     document.getElementById('panel-body').scrollTop = 0;
   } catch(e) {
-    showUpdateStatus('error', 'Something went wrong. Please try again.');
+    showUpdateStatus('error', t('update_error'));
     btn.disabled = false; btn.textContent = 'Send Update';
   }
 }
@@ -1570,12 +1610,12 @@ function getTransportIcon(tags) {
 async function fetchTransportStops(lat, lng) {
   const statusEl = document.getElementById('transport-stops-status');
   const pillsEl  = document.getElementById('panel-transport');
-  if (statusEl) statusEl.textContent = 'Loading nearby stops...';
+  if (statusEl) statusEl.textContent = t('transport_loading');
   const query = `[out:json][timeout:15];(node["highway"="bus_stop"](around:600,${lat},${lng});node["railway"="station"](around:600,${lat},${lng});node["railway"="halt"](around:600,${lat},${lng});node["railway"="tram_stop"](around:600,${lat},${lng});node["station"="subway"](around:600,${lat},${lng}););out body;`;
   try {
     const data = await fetchOverpass(query);
     if (!data.elements || data.elements.length === 0) {
-      if (statusEl) statusEl.textContent = 'No stops within 600m.'; return;
+      if (statusEl) statusEl.textContent = t('transport_none_nearby'); return;
     }
     const seen = new Set(); let count = 0;
     const typeCounts = { rail: 0, tram: 0, bus: 0 };
@@ -1595,12 +1635,12 @@ async function fetchTransportStops(lat, lng) {
       transportMarkers.push(m);
     });
     const parts = [];
-    if (typeCounts.rail > 0) parts.push(typeCounts.rail + ' rail');
-    if (typeCounts.tram > 0) parts.push(typeCounts.tram + ' tram');
-    if (typeCounts.bus  > 0) parts.push(typeCounts.bus + ' bus');
-    if (pillsEl) pillsEl.innerHTML = '<span class="transport-pill"> ' + count + ' stop' + (count !== 1 ? 's' : '') + ' within 600m</span>';
+    if (typeCounts.rail > 0) parts.push(typeCounts.rail + t('transport_rail'));
+    if (typeCounts.tram > 0) parts.push(typeCounts.tram + t('transport_tram'));
+    if (typeCounts.bus  > 0) parts.push(typeCounts.bus + t('transport_bus'));
+    if (pillsEl) pillsEl.innerHTML = '<span class="transport-pill"> ' + count + t('transport_stops') + '</span>';
     if (statusEl) statusEl.textContent = parts.join(' - ');
-  } catch(e) { if (statusEl) statusEl.textContent = 'Could not load stops.'; }
+  } catch(e) { if (statusEl) statusEl.textContent = t('transport_error'); }
 }
 
 function toggleFullscreen() {
@@ -1680,6 +1720,529 @@ document.addEventListener('click', e => {
   if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
     searchResults.classList.remove('open');
   }
+});
+
+
+// ─── INTERNATIONALISATION ───────────────────────────────────────
+var currentLang = 'en';
+
+var TRANSLATIONS = {
+  "en": {
+    "title": "ECN <span>Gym Map</span>",
+    "region": "UK & Europe",
+    "search_placeholder": "Search gyms…",
+    "btn_guide": "? Guide",
+    "btn_add_gym": "+ Add Gym",
+    "filter_all": "All gyms",
+    "filter_bouldering": "🪨 Bouldering",
+    "filter_ropes": "🧗 Ropes",
+    "filter_autobelay": "⚙️ Autobelay",
+    "filter_cafe": "☕ Café",
+    "filter_moonboard": "🌙 Moonboard",
+    "filter_kilter": "🟠 Kilter",
+    "filter_tension": "🔵 Tension",
+    "filter_woody": "🟤 Woody",
+    "filter_kids": "👶 Kids Zone",
+    "filter_speed": "⚡ Speed Wall",
+    "tab_info": "📋 Info",
+    "tab_update": "✏️ Update Info",
+    "transport_heading": "Public Transport Nearby",
+    "transport_none": "No public transport listed",
+    "transport_loading": "Loading nearby stops...",
+    "transport_none_nearby": "No stops within 600m.",
+    "transport_error": "Could not load stops.",
+    "price_prefix": "Day pass: ",
+    "price_unknown": "Price not listed",
+    "amenity_none": "No amenity data available",
+    "count_suffix": "gyms",
+    "loading_msg": "Loading gym data…",
+    "update_heading": "Suggest a correction for ",
+    "update_name": "Name correction",
+    "update_address": "Address / location fix",
+    "update_website": "Website / contact update",
+    "update_price": "Entry price update",
+    "update_closed": "⚠️ Report this gym as permanently closed",
+    "update_notes": "Other notes",
+    "update_submit": "Send Update",
+    "update_disclaimer": "Updates are reviewed by the ECN team before any changes are made. Thank you for keeping the map accurate.",
+    "update_success": "Update received - thank you! The ECN team will review it shortly.",
+    "update_error": "Something went wrong. Please try again.",
+    "update_empty": "Please fill in at least one field before submitting.",
+    "addgym_title": "➕ Add a Gym",
+    "addgym_subtitle": "Submit a new climbing facility for review by the ECN team",
+    "addgym_details": "Gym Details",
+    "addgym_name": "Gym Name *",
+    "addgym_address": "Full Address *",
+    "addgym_website": "Website",
+    "addgym_phone": "Phone",
+    "addgym_price": "Entry Price",
+    "addgym_type": "Type",
+    "addgym_facilities": "Facilities",
+    "addgym_additional": "Additional Info",
+    "addgym_notes": "Notes",
+    "addgym_submitter": "Your name / contact (optional)",
+    "addgym_submit": "Submit for Review",
+    "addgym_disclaimer": "All submissions are reviewed by the ECN team before appearing on the map. Fields marked * are required.",
+    "addgym_success": "✓ Thank you! Your submission has been received and will be reviewed by the ECN team.",
+    "addgym_error": "Something went wrong. Please try again or email callum@euroclimbing.news",
+    "addgym_empty": "Please fill in at least the gym name and address.",
+    "chain_show": "Show all ",
+    "chain_clear": "✕ Clear chain view",
+    "chain_suffix_s": " location",
+    "chain_suffix_p": " locations",
+    "transport_stops": " stops within 600m",
+    "transport_rail": " rail",
+    "transport_tram": " tram",
+    "transport_bus": " bus"
+  },
+  "fr": {
+    "title": "ECN <span>Carte des Salles</span>",
+    "region": "Royaume-Uni et Europe",
+    "search_placeholder": "Rechercher une salle…",
+    "btn_guide": "? Guide",
+    "btn_add_gym": "+ Ajouter",
+    "filter_all": "Toutes",
+    "filter_bouldering": "🪨 Bloc",
+    "filter_ropes": "🧗 Cordes",
+    "filter_autobelay": "⚙️ Moulinette auto",
+    "filter_cafe": "☕ Café",
+    "filter_moonboard": "🌙 Moonboard",
+    "filter_kilter": "🟠 Kilter",
+    "filter_tension": "🔵 Tension",
+    "filter_woody": "🟤 Woody",
+    "filter_kids": "👶 Espace enfants",
+    "filter_speed": "⚡ Mur de vitesse",
+    "tab_info": "📋 Infos",
+    "tab_update": "✏️ Corriger",
+    "transport_heading": "Transports à proximité",
+    "transport_none": "Aucun transport en commun répertorié",
+    "transport_loading": "Chargement des arrêts…",
+    "transport_none_nearby": "Aucun arrêt dans un rayon de 600m.",
+    "transport_error": "Impossible de charger les arrêts.",
+    "price_prefix": "Entrée : ",
+    "price_unknown": "Prix non indiqué",
+    "amenity_none": "Aucune donnée d'équipement disponible",
+    "count_suffix": "salles",
+    "loading_msg": "Chargement des données…",
+    "update_heading": "Suggérer une correction pour ",
+    "update_name": "Correction du nom",
+    "update_address": "Correction d'adresse",
+    "update_website": "Mise à jour site web / contact",
+    "update_price": "Mise à jour du tarif",
+    "update_closed": "⚠️ Signaler cette salle comme fermée définitivement",
+    "update_notes": "Autres remarques",
+    "update_submit": "Envoyer",
+    "update_disclaimer": "Les mises à jour sont vérifiées par l'équipe ECN avant d'être appliquées. Merci de contribuer à la précision de la carte.",
+    "update_success": "Mise à jour reçue — merci ! L'équipe ECN l'examinera prochainement.",
+    "update_error": "Un problème est survenu. Veuillez réessayer.",
+    "update_empty": "Veuillez remplir au moins un champ avant d'envoyer.",
+    "addgym_title": "➕ Ajouter une salle",
+    "addgym_subtitle": "Soumettre un nouveau site d'escalade pour examen par l'équipe ECN",
+    "addgym_details": "Détails de la salle",
+    "addgym_name": "Nom de la salle *",
+    "addgym_address": "Adresse complète *",
+    "addgym_website": "Site web",
+    "addgym_phone": "Téléphone",
+    "addgym_price": "Tarif d'entrée",
+    "addgym_type": "Type",
+    "addgym_facilities": "Équipements",
+    "addgym_additional": "Informations complémentaires",
+    "addgym_notes": "Notes",
+    "addgym_submitter": "Votre nom / contact (facultatif)",
+    "addgym_submit": "Soumettre pour examen",
+    "addgym_disclaimer": "Toutes les soumissions sont vérifiées par l'équipe ECN avant publication. Les champs marqués * sont obligatoires.",
+    "addgym_success": "✓ Merci ! Votre soumission a été reçue et sera examinée par l'équipe ECN.",
+    "addgym_error": "Un problème est survenu. Veuillez réessayer ou écrire à callum@euroclimbing.news",
+    "addgym_empty": "Veuillez indiquer au moins le nom et l'adresse de la salle.",
+    "chain_show": "Voir les ",
+    "chain_clear": "✕ Fermer la vue chaîne",
+    "chain_suffix_s": " site",
+    "chain_suffix_p": " sites",
+    "transport_stops": " arrêts dans un rayon de 600m",
+    "transport_rail": " ferroviaire",
+    "transport_tram": " tram",
+    "transport_bus": " bus"
+  },
+  "de": {
+    "title": "ECN <span>Kletterhallen-Karte</span>",
+    "region": "UK und Europa",
+    "search_placeholder": "Halle suchen…",
+    "btn_guide": "? Anleitung",
+    "btn_add_gym": "+ Hinzufügen",
+    "filter_all": "Alle",
+    "filter_bouldering": "🪨 Bouldern",
+    "filter_ropes": "🧗 Seilklettern",
+    "filter_autobelay": "⚙️ Autobelay",
+    "filter_cafe": "☕ Café",
+    "filter_moonboard": "🌙 Moonboard",
+    "filter_kilter": "🟠 Kilter",
+    "filter_tension": "🔵 Tension",
+    "filter_woody": "🟤 Woody",
+    "filter_kids": "👶 Kinderbereich",
+    "filter_speed": "⚡ Speedwand",
+    "tab_info": "📋 Info",
+    "tab_update": "✏️ Korrektur",
+    "transport_heading": "Öffentlicher Nahverkehr",
+    "transport_none": "Kein öffentlicher Nahverkehr verzeichnet",
+    "transport_loading": "Haltestellen werden geladen…",
+    "transport_none_nearby": "Keine Haltestellen im Umkreis von 600m.",
+    "transport_error": "Haltestellen konnten nicht geladen werden.",
+    "price_prefix": "Tageskarte: ",
+    "price_unknown": "Preis nicht angegeben",
+    "amenity_none": "Keine Ausstattungsdaten verfügbar",
+    "count_suffix": "Hallen",
+    "loading_msg": "Daten werden geladen…",
+    "update_heading": "Korrektur vorschlagen für ",
+    "update_name": "Namenskorrektur",
+    "update_address": "Adresskorrektur",
+    "update_website": "Website- / Kontaktaktualisierung",
+    "update_price": "Preiskorrektur",
+    "update_closed": "⚠️ Diese Halle als dauerhaft geschlossen melden",
+    "update_notes": "Sonstige Anmerkungen",
+    "update_submit": "Absenden",
+    "update_disclaimer": "Korrekturen werden vom ECN-Team geprüft, bevor Änderungen übernommen werden. Vielen Dank für Ihre Mithilfe.",
+    "update_success": "Korrektur erhalten — vielen Dank! Das ECN-Team wird sie in Kürze prüfen.",
+    "update_error": "Es ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
+    "update_empty": "Bitte füllen Sie mindestens ein Feld aus.",
+    "addgym_title": "➕ Halle hinzufügen",
+    "addgym_subtitle": "Neue Kletteranlage zur Prüfung durch das ECN-Team einreichen",
+    "addgym_details": "Hallendetails",
+    "addgym_name": "Name der Halle *",
+    "addgym_address": "Vollständige Adresse *",
+    "addgym_website": "Website",
+    "addgym_phone": "Telefon",
+    "addgym_price": "Eintrittspreis",
+    "addgym_type": "Typ",
+    "addgym_facilities": "Ausstattung",
+    "addgym_additional": "Zusätzliche Informationen",
+    "addgym_notes": "Anmerkungen",
+    "addgym_submitter": "Ihr Name / Kontakt (optional)",
+    "addgym_submit": "Zur Prüfung einreichen",
+    "addgym_disclaimer": "Alle Einreichungen werden vom ECN-Team geprüft, bevor sie auf der Karte erscheinen. Mit * markierte Felder sind Pflichtfelder.",
+    "addgym_success": "✓ Vielen Dank! Ihre Einreichung wurde erhalten und wird vom ECN-Team geprüft.",
+    "addgym_error": "Es ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut oder schreiben Sie an callum@euroclimbing.news",
+    "addgym_empty": "Bitte geben Sie mindestens den Namen und die Adresse der Halle an.",
+    "chain_show": "Alle ",
+    "chain_clear": "✕ Kettenansicht schließen",
+    "chain_suffix_s": " Standort anzeigen",
+    "chain_suffix_p": " Standorte anzeigen",
+    "transport_stops": " Haltestellen im Umkreis von 600m",
+    "transport_rail": " Bahn",
+    "transport_tram": " Tram",
+    "transport_bus": " Bus"
+  },
+  "it": {
+    "title": "ECN <span>Mappa Palestre</span>",
+    "region": "UK ed Europa",
+    "search_placeholder": "Cerca palestra…",
+    "btn_guide": "? Guida",
+    "btn_add_gym": "+ Aggiungi",
+    "filter_all": "Tutte",
+    "filter_bouldering": "🪨 Boulder",
+    "filter_ropes": "🧗 Corde",
+    "filter_autobelay": "⚙️ Autobelay",
+    "filter_cafe": "☕ Caffè",
+    "filter_moonboard": "🌙 Moonboard",
+    "filter_kilter": "🟠 Kilter",
+    "filter_tension": "🔵 Tension",
+    "filter_woody": "🟤 Woody",
+    "filter_kids": "👶 Area bambini",
+    "filter_speed": "⚡ Speed Wall",
+    "tab_info": "📋 Info",
+    "tab_update": "✏️ Correggi",
+    "transport_heading": "Trasporto pubblico nelle vicinanze",
+    "transport_none": "Nessun trasporto pubblico indicato",
+    "transport_loading": "Caricamento fermate…",
+    "transport_none_nearby": "Nessuna fermata entro 600m.",
+    "transport_error": "Impossibile caricare le fermate.",
+    "price_prefix": "Ingresso: ",
+    "price_unknown": "Prezzo non indicato",
+    "amenity_none": "Nessun dato sulle attrezzature disponibile",
+    "count_suffix": "palestre",
+    "loading_msg": "Caricamento dati…",
+    "update_heading": "Suggerisci una correzione per ",
+    "update_name": "Correzione nome",
+    "update_address": "Correzione indirizzo",
+    "update_website": "Aggiornamento sito web / contatti",
+    "update_price": "Aggiornamento prezzo",
+    "update_closed": "⚠️ Segnala questa palestra come chiusa definitivamente",
+    "update_notes": "Altre note",
+    "update_submit": "Invia",
+    "update_disclaimer": "Gli aggiornamenti vengono verificati dal team ECN prima di essere applicati. Grazie per contribuire all'accuratezza della mappa.",
+    "update_success": "Aggiornamento ricevuto — grazie! Il team ECN lo esaminerà a breve.",
+    "update_error": "Si è verificato un errore. Riprova.",
+    "update_empty": "Compila almeno un campo prima di inviare.",
+    "addgym_title": "➕ Aggiungi palestra",
+    "addgym_subtitle": "Invia una nuova struttura di arrampicata per la revisione del team ECN",
+    "addgym_details": "Dettagli palestra",
+    "addgym_name": "Nome palestra *",
+    "addgym_address": "Indirizzo completo *",
+    "addgym_website": "Sito web",
+    "addgym_phone": "Telefono",
+    "addgym_price": "Prezzo ingresso",
+    "addgym_type": "Tipo",
+    "addgym_facilities": "Attrezzature",
+    "addgym_additional": "Informazioni aggiuntive",
+    "addgym_notes": "Note",
+    "addgym_submitter": "Nome / contatto (opzionale)",
+    "addgym_submit": "Invia per revisione",
+    "addgym_disclaimer": "Tutte le segnalazioni vengono verificate dal team ECN prima della pubblicazione. I campi contrassegnati con * sono obbligatori.",
+    "addgym_success": "✓ Grazie! La tua segnalazione è stata ricevuta e verrà esaminata dal team ECN.",
+    "addgym_error": "Si è verificato un errore. Riprova o scrivi a callum@euroclimbing.news",
+    "addgym_empty": "Indica almeno il nome e l'indirizzo della palestra.",
+    "chain_show": "Mostra tutti i ",
+    "chain_clear": "✕ Chiudi vista catena",
+    "chain_suffix_s": " sito",
+    "chain_suffix_p": " siti",
+    "transport_stops": " fermate entro 600m",
+    "transport_rail": " treno",
+    "transport_tram": " tram",
+    "transport_bus": " bus"
+  },
+  "no": {
+    "title": "ECN <span>Klatrehall-kart</span>",
+    "region": "Storbritannia og Europa",
+    "search_placeholder": "Søk etter hall…",
+    "btn_guide": "? Veiledning",
+    "btn_add_gym": "+ Legg til",
+    "filter_all": "Alle",
+    "filter_bouldering": "🪨 Buldring",
+    "filter_ropes": "🧗 Tau",
+    "filter_autobelay": "⚙️ Autobelay",
+    "filter_cafe": "☕ Kafé",
+    "filter_moonboard": "🌙 Moonboard",
+    "filter_kilter": "🟠 Kilter",
+    "filter_tension": "🔵 Tension",
+    "filter_woody": "🟤 Woody",
+    "filter_kids": "👶 Barnesone",
+    "filter_speed": "⚡ Hastighetsvegg",
+    "tab_info": "📋 Info",
+    "tab_update": "✏️ Korriger",
+    "transport_heading": "Kollektivtransport i nærheten",
+    "transport_none": "Ingen kollektivtransport registrert",
+    "transport_loading": "Laster holdeplasser…",
+    "transport_none_nearby": "Ingen holdeplasser innen 600m.",
+    "transport_error": "Kunne ikke laste holdeplasser.",
+    "price_prefix": "Dagskort: ",
+    "price_unknown": "Pris ikke oppgitt",
+    "amenity_none": "Ingen fasilitetsdata tilgjengelig",
+    "count_suffix": "haller",
+    "loading_msg": "Laster data…",
+    "update_heading": "Foreslå en rettelse for ",
+    "update_name": "Navnekorreksjon",
+    "update_address": "Adressekorreksjon",
+    "update_website": "Nettside- / kontaktoppdatering",
+    "update_price": "Prisoppdatering",
+    "update_closed": "⚠️ Rapporter denne hallen som permanent stengt",
+    "update_notes": "Andre merknader",
+    "update_submit": "Send inn",
+    "update_disclaimer": "Oppdateringer gjennomgås av ECN-teamet før endringer gjøres. Takk for at du bidrar til kartets nøyaktighet.",
+    "update_success": "Oppdatering mottatt — takk! ECN-teamet vil gjennomgå den snart.",
+    "update_error": "Noe gikk galt. Vennligst prøv igjen.",
+    "update_empty": "Fyll inn minst ett felt før du sender.",
+    "addgym_title": "➕ Legg til hall",
+    "addgym_subtitle": "Send inn et nytt klatreanlegg for gjennomgang av ECN-teamet",
+    "addgym_details": "Halldetaljer",
+    "addgym_name": "Hallnavn *",
+    "addgym_address": "Fullstendig adresse *",
+    "addgym_website": "Nettside",
+    "addgym_phone": "Telefon",
+    "addgym_price": "Inngangspris",
+    "addgym_type": "Type",
+    "addgym_facilities": "Fasiliteter",
+    "addgym_additional": "Tilleggsinformasjon",
+    "addgym_notes": "Merknader",
+    "addgym_submitter": "Ditt navn / kontakt (valgfritt)",
+    "addgym_submit": "Send til gjennomgang",
+    "addgym_disclaimer": "Alle innsendinger gjennomgås av ECN-teamet før de vises på kartet. Felt merket med * er obligatoriske.",
+    "addgym_success": "✓ Takk! Innsendingen din er mottatt og vil bli gjennomgått av ECN-teamet.",
+    "addgym_error": "Noe gikk galt. Prøv igjen eller send e-post til callum@euroclimbing.news",
+    "addgym_empty": "Oppgi minst navn og adresse for hallen.",
+    "chain_show": "Vis alle ",
+    "chain_clear": "✕ Lukk kjedevisning",
+    "chain_suffix_s": " lokasjon",
+    "chain_suffix_p": " lokasjoner",
+    "transport_stops": " holdeplasser innen 600m",
+    "transport_rail": " jernbane",
+    "transport_tram": " trikk",
+    "transport_bus": " buss"
+  },
+  "es": {
+    "title": "ECN <span>Mapa de Rocódromos</span>",
+    "region": "Reino Unido y Europa",
+    "search_placeholder": "Buscar rocódromo…",
+    "btn_guide": "? Guía",
+    "btn_add_gym": "+ Añadir",
+    "filter_all": "Todos",
+    "filter_bouldering": "🪨 Búlder",
+    "filter_ropes": "🧗 Cuerda",
+    "filter_autobelay": "⚙️ Autobelay",
+    "filter_cafe": "☕ Cafetería",
+    "filter_moonboard": "🌙 Moonboard",
+    "filter_kilter": "🟠 Kilter",
+    "filter_tension": "🔵 Tension",
+    "filter_woody": "🟤 Woody",
+    "filter_kids": "👶 Zona infantil",
+    "filter_speed": "⚡ Velocidad",
+    "tab_info": "📋 Info",
+    "tab_update": "✏️ Corregir",
+    "transport_heading": "Transporte público cercano",
+    "transport_none": "Sin transporte público indicado",
+    "transport_loading": "Cargando paradas…",
+    "transport_none_nearby": "Sin paradas en un radio de 600m.",
+    "transport_error": "No se pudieron cargar las paradas.",
+    "price_prefix": "Entrada: ",
+    "price_unknown": "Precio no indicado",
+    "amenity_none": "Sin datos de equipamiento disponibles",
+    "count_suffix": "rocódromos",
+    "loading_msg": "Cargando datos…",
+    "update_heading": "Sugerir una corrección para ",
+    "update_name": "Corrección de nombre",
+    "update_address": "Corrección de dirección",
+    "update_website": "Actualización de sitio web / contacto",
+    "update_price": "Actualización de precio",
+    "update_closed": "⚠️ Reportar este rocódromo como cerrado permanentemente",
+    "update_notes": "Otras notas",
+    "update_submit": "Enviar",
+    "update_disclaimer": "Todas las actualizaciones son revisadas por el equipo ECN antes de aplicarse. Gracias por contribuir a la precisión del mapa.",
+    "update_success": "Actualización recibida — ¡gracias! El equipo ECN la revisará pronto.",
+    "update_error": "Algo salió mal. Por favor, inténtalo de nuevo.",
+    "update_empty": "Rellena al menos un campo antes de enviar.",
+    "addgym_title": "➕ Añadir rocódromo",
+    "addgym_subtitle": "Enviar una nueva instalación de escalada para revisión del equipo ECN",
+    "addgym_details": "Detalles del rocódromo",
+    "addgym_name": "Nombre *",
+    "addgym_address": "Dirección completa *",
+    "addgym_website": "Sitio web",
+    "addgym_phone": "Teléfono",
+    "addgym_price": "Precio de entrada",
+    "addgym_type": "Tipo",
+    "addgym_facilities": "Instalaciones",
+    "addgym_additional": "Información adicional",
+    "addgym_notes": "Notas",
+    "addgym_submitter": "Tu nombre / contacto (opcional)",
+    "addgym_submit": "Enviar para revisión",
+    "addgym_disclaimer": "Todas las propuestas son revisadas por el equipo ECN antes de publicarse. Los campos marcados con * son obligatorios.",
+    "addgym_success": "✓ ¡Gracias! Tu propuesta ha sido recibida y será revisada por el equipo ECN.",
+    "addgym_error": "Algo salió mal. Inténtalo de nuevo o escribe a callum@euroclimbing.news",
+    "addgym_empty": "Indica al menos el nombre y la dirección del rocódromo.",
+    "chain_show": "Ver los ",
+    "chain_clear": "✕ Cerrar vista cadena",
+    "chain_suffix_s": " local",
+    "chain_suffix_p": " locales",
+    "transport_stops": " paradas en un radio de 600m",
+    "transport_rail": " tren",
+    "transport_tram": " tranvía",
+    "transport_bus": " bus"
+  }
+};
+
+var GUIDE_TRANSLATIONS = {
+  en: "\n      <div class=\"guide-section\">\n        <h3>🗺️ Getting Started</h3>\n        <p>The ECN Gym Map is a free resource showing climbing facilities across the UK, Ireland and Europe. Over 340 mapped sites are shown as orange dots. Pan and zoom using your mouse or trackpad — on mobile, use touch gestures.</p>\n        <div class=\"guide-tip\">💡 Click any orange marker to open that gym's profile. Search by name using the search bar in the header.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>🏟️ Gym Profiles</h3>\n        <p>Click any marker to open the gym's profile panel. Each listing shows the gym's name, address, entry price, website, phone number, and confirmed amenities — bouldering, ropes, café, training boards, kids zone and more.</p>\n        <p>The <strong>Public Transport Nearby</strong> section shows the number of stops within 600m, pulled live from OpenStreetMap.</p>\n        <div class=\"guide-tip\">💡 If a gym belongs to a chain, a badge appears in the panel — click <strong>Show all locations</strong> to highlight every site in that group on the map.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>🔎 Search & Filter</h3>\n        <p>Use the search bar in the header to find a gym by name. Results appear as you type — click any result to fly to that gym and open its profile.</p>\n        <p>The filter bar below the header lets you narrow the map to gyms with specific features: bouldering, ropes, autobelay, café, Moonboard, Kilter, Tension, Woody, kids zone, or speed wall.</p>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>➕ Add a Missing Gym</h3>\n        <p>Know of a facility that isn't on the map? Click <strong>+ Add Gym</strong> in the header to submit it. Provide as much detail as you can — name, address, website, type and amenities. All submissions are reviewed by the ECN team before appearing on the map.</p>\n        <div class=\"guide-tip\">💡 The more detail you provide, the faster we can verify and add the listing.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>✏️ Suggest a Correction</h3>\n        <p>If a gym's information is outdated or incorrect, open the profile and click the <strong>Update Info</strong> tab. You can submit corrections for the name, address, website, entry price, or report a permanent closure. All submissions are reviewed before any changes are made.</p>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>📊 ECN Pro</h3>\n        <p>This is the free version of the ECN map. <strong>ECN Pro</strong> adds population density and demographic overlays, adjustable walk/cycle/drive catchment analysis with population counts, competitor gym counts within any catchment zone, and location analysis for any point in Europe.</p>\n        <p>Visit <a href=\"https://euroclimbing.news/pro\" target=\"_blank\" style=\"color:#000099\">euroclimbing.news/pro</a> to find out more.</p>\n      </div>\n",
+  fr: "\n      <div class=\"guide-section\">\n        <h3>🗺️ Premiers pas</h3>\n        <p>La carte ECN est une ressource gratuite montrant les salles d'escalade au Royaume-Uni, en Irlande et en Europe. Plus de 340 sites sont représentés par des points orange. Naviguez et zoomez avec votre souris ou trackpad — sur mobile, utilisez les gestes tactiles.</p>\n        <div class=\"guide-tip\">💡 Cliquez sur un marqueur orange pour ouvrir le profil de la salle. Recherchez par nom via la barre de recherche.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>🏟️ Profils des salles</h3>\n        <p>Cliquez sur un marqueur pour ouvrir le panneau de profil. Chaque fiche indique le nom, l'adresse, le tarif d'entrée, le site web, le numéro de téléphone et les équipements confirmés — bloc, cordes, café, panneaux d'entraînement, espace enfants et plus.</p>\n        <p>La section <strong>Transports à proximité</strong> indique le nombre d'arrêts dans un rayon de 600m, récupérés en temps réel depuis OpenStreetMap.</p>\n        <div class=\"guide-tip\">💡 Si une salle fait partie d'une chaîne, un badge apparaît — cliquez sur <strong>Voir tous les sites</strong> pour les mettre en évidence sur la carte.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>🔎 Recherche et filtres</h3>\n        <p>Utilisez la barre de recherche pour trouver une salle par nom. Les résultats apparaissent au fur et à mesure — cliquez sur un résultat pour y accéder et ouvrir son profil.</p>\n        <p>La barre de filtres permet de n'afficher que les salles disposant d'équipements spécifiques : bloc, cordes, moulinette auto, café, Moonboard, Kilter, Tension, Woody, espace enfants ou mur de vitesse.</p>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>➕ Ajouter une salle manquante</h3>\n        <p>Vous connaissez une salle qui n'est pas sur la carte ? Cliquez sur <strong>+ Ajouter</strong> pour la soumettre. Fournissez autant de détails que possible. Toutes les soumissions sont vérifiées par l'équipe ECN.</p>\n        <div class=\"guide-tip\">💡 Plus vous fournissez de détails, plus vite nous pourrons vérifier et ajouter la fiche.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>✏️ Suggérer une correction</h3>\n        <p>Si les informations d'une salle sont obsolètes ou incorrectes, ouvrez le profil et cliquez sur l'onglet <strong>Corriger</strong>. Vous pouvez soumettre des corrections pour le nom, l'adresse, le site web, le tarif ou signaler une fermeture définitive. Toutes les soumissions sont vérifiées avant publication.</p>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>📊 ECN Pro</h3>\n        <p>Ceci est la version gratuite de la carte ECN. <strong>ECN Pro</strong> ajoute des couches de densité de population et démographiques, une analyse de zone de chalandise ajustable, le comptage des salles concurrentes et l'analyse de localisation pour n'importe quel point en Europe.</p>\n        <p>Visitez <a href=\"https://euroclimbing.news/pro\" target=\"_blank\" style=\"color:#000099\">euroclimbing.news/pro</a> pour en savoir plus.</p>\n      </div>\n",
+  de: "\n      <div class=\"guide-section\">\n        <h3>🗺️ Erste Schritte</h3>\n        <p>Die ECN-Karte ist eine kostenlose Ressource, die Kletteranlagen in Großbritannien, Irland und Europa zeigt. Über 340 Standorte werden als orangefarbene Punkte dargestellt. Navigieren Sie mit Maus oder Trackpad — auf Mobilgeräten mit Touch-Gesten.</p>\n        <div class=\"guide-tip\">💡 Klicken Sie auf einen orangefarbenen Marker, um das Hallenprofil zu öffnen. Suchen Sie über die Suchleiste nach Namen.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>🏟️ Hallenprofile</h3>\n        <p>Klicken Sie auf einen Marker, um das Profil zu öffnen. Jeder Eintrag zeigt Name, Adresse, Eintrittspreis, Website, Telefonnummer und bestätigte Ausstattung — Bouldern, Seilklettern, Café, Trainingsboards, Kinderbereich und mehr.</p>\n        <p>Der Abschnitt <strong>Öffentlicher Nahverkehr</strong> zeigt die Anzahl der Haltestellen im Umkreis von 600m, live von OpenStreetMap abgerufen.</p>\n        <div class=\"guide-tip\">💡 Gehört eine Halle zu einer Kette, erscheint ein Badge — klicken Sie auf <strong>Alle Standorte anzeigen</strong>, um sie auf der Karte hervorzuheben.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>🔎 Suche und Filter</h3>\n        <p>Verwenden Sie die Suchleiste, um eine Halle nach Namen zu finden. Ergebnisse erscheinen während der Eingabe — klicken Sie auf ein Ergebnis, um dorthin zu fliegen und das Profil zu öffnen.</p>\n        <p>Die Filterleiste ermöglicht die Eingrenzung auf Hallen mit bestimmter Ausstattung: Bouldern, Seilklettern, Autobelay, Café, Moonboard, Kilter, Tension, Woody, Kinderbereich oder Speedwand.</p>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>➕ Fehlende Halle hinzufügen</h3>\n        <p>Kennen Sie eine Anlage, die nicht auf der Karte ist? Klicken Sie auf <strong>+ Hinzufügen</strong>, um sie einzureichen. Geben Sie so viele Details wie möglich an. Alle Einreichungen werden vom ECN-Team geprüft.</p>\n        <div class=\"guide-tip\">💡 Je mehr Details Sie angeben, desto schneller können wir den Eintrag verifizieren.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>✏️ Korrektur vorschlagen</h3>\n        <p>Wenn die Informationen einer Halle veraltet oder falsch sind, öffnen Sie das Profil und klicken Sie auf den Reiter <strong>Korrektur</strong>. Sie können Korrekturen für Name, Adresse, Website, Preis einreichen oder eine dauerhafte Schließung melden. Alle Eingaben werden vor Übernahme geprüft.</p>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>📊 ECN Pro</h3>\n        <p>Dies ist die kostenlose Version der ECN-Karte. <strong>ECN Pro</strong> bietet zusätzlich Bevölkerungsdichte- und Demografie-Overlays, anpassbare Einzugsgebietsanalysen, Konkurrenz-Hallenzählung und Standortanalyse für jeden Punkt in Europa.</p>\n        <p>Besuchen Sie <a href=\"https://euroclimbing.news/pro\" target=\"_blank\" style=\"color:#000099\">euroclimbing.news/pro</a> für weitere Informationen.</p>\n      </div>\n",
+  it: "\n      <div class=\"guide-section\">\n        <h3>🗺️ Per iniziare</h3>\n        <p>La mappa ECN è una risorsa gratuita che mostra le palestre di arrampicata nel Regno Unito, in Irlanda e in Europa. Oltre 340 siti sono mostrati come punti arancioni. Naviga e zooma con il mouse o il trackpad — su mobile, usa i gesti touch.</p>\n        <div class=\"guide-tip\">💡 Clicca su un marcatore arancione per aprire il profilo della palestra. Cerca per nome usando la barra di ricerca.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>🏟️ Profili delle palestre</h3>\n        <p>Clicca su un marcatore per aprire il pannello del profilo. Ogni scheda mostra nome, indirizzo, prezzo d'ingresso, sito web, numero di telefono e attrezzature confermate — boulder, corde, caffè, pannelli di allenamento, area bambini e altro.</p>\n        <p>La sezione <strong>Trasporto pubblico nelle vicinanze</strong> mostra il numero di fermate entro 600m, recuperate in tempo reale da OpenStreetMap.</p>\n        <div class=\"guide-tip\">💡 Se una palestra fa parte di una catena, appare un badge — clicca <strong>Mostra tutti i siti</strong> per evidenziarli sulla mappa.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>🔎 Ricerca e filtri</h3>\n        <p>Usa la barra di ricerca per trovare una palestra per nome. I risultati appaiono durante la digitazione — clicca su un risultato per raggiungerlo e aprire il profilo.</p>\n        <p>La barra dei filtri permette di visualizzare solo le palestre con attrezzature specifiche: boulder, corde, autobelay, caffè, Moonboard, Kilter, Tension, Woody, area bambini o speed wall.</p>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>➕ Aggiungi una palestra mancante</h3>\n        <p>Conosci una struttura che non è sulla mappa? Clicca su <strong>+ Aggiungi</strong> per segnalarla. Fornisci quanti più dettagli possibile. Tutte le segnalazioni vengono verificate dal team ECN.</p>\n        <div class=\"guide-tip\">💡 Più dettagli fornisci, più velocemente potremo verificare e aggiungere la scheda.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>✏️ Suggerisci una correzione</h3>\n        <p>Se le informazioni di una palestra sono obsolete o errate, apri il profilo e clicca sulla scheda <strong>Correggi</strong>. Puoi inviare correzioni per nome, indirizzo, sito web, prezzo o segnalare una chiusura definitiva. Tutte le correzioni vengono verificate prima della pubblicazione.</p>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>📊 ECN Pro</h3>\n        <p>Questa è la versione gratuita della mappa ECN. <strong>ECN Pro</strong> aggiunge overlay di densità di popolazione e demografici, analisi di bacino d'utenza regolabile, conteggio palestre concorrenti e analisi di localizzazione per qualsiasi punto in Europa.</p>\n        <p>Visita <a href=\"https://euroclimbing.news/pro\" target=\"_blank\" style=\"color:#000099\">euroclimbing.news/pro</a> per saperne di più.</p>\n      </div>\n",
+  no: "\n      <div class=\"guide-section\">\n        <h3>🗺️ Kom i gang</h3>\n        <p>ECN-kartet er en gratis ressurs som viser klatreanlegg i Storbritannia, Irland og Europa. Over 340 steder vises som oransje prikker. Naviger og zoom med musen eller styreplaten — på mobil bruker du berøringsbevegelser.</p>\n        <div class=\"guide-tip\">💡 Klikk på en oransje markør for å åpne hallens profil. Søk etter navn via søkefeltet.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>🏟️ Hallprofiler</h3>\n        <p>Klikk på en markør for å åpne profilpanelet. Hver oppføring viser navn, adresse, inngangspris, nettside, telefonnummer og bekreftede fasiliteter — buldring, tau, kafé, treningsbrett, barnesone og mer.</p>\n        <p>Avsnittet <strong>Kollektivtransport i nærheten</strong> viser antall holdeplasser innen 600m, hentet direkte fra OpenStreetMap.</p>\n        <div class=\"guide-tip\">💡 Hvis en hall tilhører en kjede, vises et merke — klikk <strong>Vis alle lokasjoner</strong> for å markere dem på kartet.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>🔎 Søk og filter</h3>\n        <p>Bruk søkefeltet for å finne en hall etter navn. Resultater vises mens du skriver — klikk på et resultat for å fly dit og åpne profilen.</p>\n        <p>Filterlinjen lar deg begrense kartet til haller med spesifikke fasiliteter: buldring, tau, autobelay, kafé, Moonboard, Kilter, Tension, Woody, barnesone eller hastighetsvegg.</p>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>➕ Legg til en manglende hall</h3>\n        <p>Kjenner du til et anlegg som ikke er på kartet? Klikk <strong>+ Legg til</strong> for å sende det inn. Oppgi så mange detaljer som mulig. Alle innsendinger gjennomgås av ECN-teamet.</p>\n        <div class=\"guide-tip\">💡 Jo flere detaljer du gir, desto raskere kan vi verifisere og legge til oppføringen.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>✏️ Foreslå en rettelse</h3>\n        <p>Hvis informasjonen om en hall er utdatert eller feil, åpne profilen og klikk på fanen <strong>Korriger</strong>. Du kan sende inn rettelser for navn, adresse, nettside, pris eller rapportere en permanent stenging. Alle rettelser gjennomgås før endringer gjøres.</p>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>📊 ECN Pro</h3>\n        <p>Dette er gratisversjonen av ECN-kartet. <strong>ECN Pro</strong> legger til befolkningstetthet og demografiske lag, justerbar nedslagsanalyse, telling av konkurrerende haller og stedsanalyse for ethvert punkt i Europa.</p>\n        <p>Besøk <a href=\"https://euroclimbing.news/pro\" target=\"_blank\" style=\"color:#000099\">euroclimbing.news/pro</a> for mer informasjon.</p>\n      </div>\n",
+  es: "\n      <div class=\"guide-section\">\n        <h3>🗺️ Primeros pasos</h3>\n        <p>El mapa ECN es un recurso gratuito que muestra instalaciones de escalada en el Reino Unido, Irlanda y Europa. Más de 340 sitios se muestran como puntos naranjas. Navega y amplía con el ratón o trackpad — en móvil, usa gestos táctiles.</p>\n        <div class=\"guide-tip\">💡 Haz clic en un marcador naranja para abrir el perfil del rocódromo. Busca por nombre usando la barra de búsqueda.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>🏟️ Perfiles de rocódromos</h3>\n        <p>Haz clic en un marcador para abrir el panel del perfil. Cada ficha muestra el nombre, dirección, precio de entrada, sitio web, teléfono y equipamiento confirmado — búlder, cuerda, cafetería, paneles de entrenamiento, zona infantil y más.</p>\n        <p>La sección <strong>Transporte público cercano</strong> muestra el número de paradas en un radio de 600m, obtenidas en tiempo real de OpenStreetMap.</p>\n        <div class=\"guide-tip\">💡 Si un rocódromo pertenece a una cadena, aparece una insignia — haz clic en <strong>Ver todos los locales</strong> para resaltarlos en el mapa.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>🔎 Búsqueda y filtros</h3>\n        <p>Usa la barra de búsqueda para encontrar un rocódromo por nombre. Los resultados aparecen mientras escribes — haz clic en uno para ir allí y abrir su perfil.</p>\n        <p>La barra de filtros permite mostrar solo rocódromos con equipamiento específico: búlder, cuerda, autobelay, cafetería, Moonboard, Kilter, Tension, Woody, zona infantil o muro de velocidad.</p>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>➕ Añadir un rocódromo</h3>\n        <p>¿Conoces una instalación que no aparece en el mapa? Haz clic en <strong>+ Añadir</strong> para enviarla. Proporciona tantos detalles como sea posible. Todas las propuestas son revisadas por el equipo ECN.</p>\n        <div class=\"guide-tip\">💡 Cuantos más detalles proporciones, más rápido podremos verificar y añadir la ficha.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>✏️ Sugerir una corrección</h3>\n        <p>Si la información de un rocódromo está desactualizada o es incorrecta, abre el perfil y haz clic en la pestaña <strong>Corregir</strong>. Puedes enviar correcciones de nombre, dirección, sitio web, precio o reportar un cierre permanente. Todas las correcciones son revisadas antes de aplicarse.</p>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>📊 ECN Pro</h3>\n        <p>Esta es la versión gratuita del mapa ECN. <strong>ECN Pro</strong> añade capas de densidad de población y demográficas, análisis de zona de influencia ajustable, conteo de rocódromos competidores y análisis de ubicación para cualquier punto de Europa.</p>\n        <p>Visita <a href=\"https://euroclimbing.news/pro\" target=\"_blank\" style=\"color:#000099\">euroclimbing.news/pro</a> para más información.</p>\n      </div>\n"
+};
+
+function toggleLangMenu(e) {
+  e.stopPropagation();
+  document.getElementById('lang-dropdown').classList.toggle('open');
+}
+document.addEventListener('click', function() {
+  var dd = document.getElementById('lang-dropdown');
+  if (dd) dd.classList.remove('open');
+});
+
+function t(key) {
+  var lang = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
+  return lang[key] || TRANSLATIONS.en[key] || key;
+}
+
+function setLang(code) {
+  currentLang = code;
+  document.getElementById('lang-dropdown').classList.remove('open');
+
+  // Update button label
+  var labels = { en: '🌐 EN', fr: '🌐 FR', de: '🌐 DE', it: '🌐 IT', no: '🌐 NO', es: '🌐 ES' };
+  document.getElementById('lang-btn').textContent = labels[code] || labels.en;
+
+  // Mark active option
+  document.querySelectorAll('.lang-opt').forEach(function(el) {
+    el.classList.toggle('active', el.textContent.toLowerCase().indexOf(code) >= 0 ||
+      (code === 'en' && el.textContent.indexOf('English') >= 0) ||
+      (code === 'fr' && el.textContent.indexOf('Fran') >= 0) ||
+      (code === 'de' && el.textContent.indexOf('Deutsch') >= 0) ||
+      (code === 'it' && el.textContent.indexOf('Italiano') >= 0) ||
+      (code === 'no' && el.textContent.indexOf('Norsk') >= 0) ||
+      (code === 'es' && el.textContent.indexOf('Espa') >= 0)
+    );
+  });
+
+  // Update all data-i18n elements
+  document.querySelectorAll('[data-i18n]').forEach(function(el) {
+    var key = el.getAttribute('data-i18n');
+    var val = t(key);
+    if (val) el.textContent = val;
+  });
+
+  // Update header title (has HTML inside)
+  var titleEl = document.getElementById('header-title');
+  if (titleEl) titleEl.innerHTML = t('title');
+
+  // Update search placeholder
+  var searchEl = document.getElementById('gym-search');
+  if (searchEl) searchEl.placeholder = t('search_placeholder');
+
+  // Update guide button
+  var guideBtn = document.getElementById('guide-btn');
+  if (guideBtn) guideBtn.textContent = t('btn_guide');
+
+  // Update add gym button
+  var addBtn = document.getElementById('add-gym-btn');
+  if (addBtn) addBtn.textContent = t('btn_add_gym');
+
+  // Update count badge suffix
+  updateCountBadge();
+
+  // Update guide body
+  var gb = document.getElementById('guide-body');
+  if (gb) {
+    var guideHtml = GUIDE_TRANSLATIONS[code];
+    if (guideHtml) {
+      gb.innerHTML = guideHtml;
+    } else if (window._guideEN) {
+      gb.innerHTML = window._guideEN;
+    }
+  }
+
+  // Re-render panel if open
+  if (selectedGym) {
+    showPanel(selectedGym.properties, selectedGymIdx);
+  }
+
+  // Persist
+  try { localStorage.setItem('ecn_lang', code); } catch(e) {}
+}
+
+function updateCountBadge() {
+  var countEl = document.getElementById('visible-count');
+  var badge = document.getElementById('count-badge');
+  if (countEl && badge) {
+    var num = countEl.textContent;
+    badge.innerHTML = '<span id="visible-count">' + num + '</span> ' + t('count_suffix');
+  }
+}
+
+// Store English guide on load and restore saved language
+document.addEventListener('DOMContentLoaded', function() {
+  var gb = document.getElementById('guide-body');
+  if (gb) window._guideEN = gb.innerHTML;
+  try {
+    var saved = localStorage.getItem('ecn_lang');
+    if (saved && TRANSLATIONS[saved]) setLang(saved);
+  } catch(e) {}
 });
 
 loadGyms();
