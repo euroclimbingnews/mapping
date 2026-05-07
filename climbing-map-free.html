@@ -1,0 +1,2289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECN — Climbing Gym Map (UK & Europe)</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --forest:   #2a4520;
+    --forest-m: #3a5e2e;
+    --stone:    #6b6b5e;
+    --cream:    #f7f3ec;
+    --warm:     #ede8df;
+    --orange:   #d4581a;
+    --sand:     #c8b89a;
+    --white:    #ffffff;
+    --shadow:   0 4px 24px rgba(0,0,0,0.13);
+    --radius:   12px;
+  }
+
+  html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1a1a18; overflow: hidden; }
+
+  /* ── HEADER ─────────────────────────────────────────── */
+  #header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: #000099;
+    display: flex; align-items: center; gap: 16px;
+    padding: 0 20px; height: 58px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+  }
+  #header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.15rem; color: var(--cream); letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+  #header h1 span { color: var(--sand); }
+
+  .header-pill {
+    background: rgba(255,255,255,0.12);
+    color: var(--cream); font-size: 0.72rem; font-weight: 500;
+    padding: 3px 10px; border-radius: 20px; letter-spacing: 0.04em;
+  }
+
+  /* Layers button in header */
+  #layers-btn {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.13);
+    border: 1px solid rgba(255,255,255,0.25);
+    color: var(--cream); font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem; font-weight: 500;
+    padding: 6px 13px; border-radius: 20px;
+    cursor: pointer; white-space: nowrap;
+    transition: background 0.2s, border-color 0.2s;
+    margin-left: auto;
+  }
+  #layers-btn:hover, #layers-btn.active {
+    background: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.5);
+  }
+  #layers-btn.active { background: var(--sand); color: var(--forest); border-color: var(--sand); }
+  #layers-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+  #guide-btn {
+    margin-left: auto;
+    padding: 6px 14px; border-radius: 6px;
+    background: rgba(255,255,255,0.12); border: 1.5px solid rgba(255,255,255,0.25);
+    color: var(--cream); font-size: 0.78rem; font-weight: 600;
+    font-family: 'DM Sans', sans-serif; cursor: pointer;
+    transition: all 0.15s; white-space: nowrap;
+  }
+  #guide-btn:hover { background: rgba(255,255,255,0.22); }
+
+  #add-gym-btn {
+    padding: 6px 14px; border-radius: 6px;
+    background: var(--orange); border: 1.5px solid var(--orange);
+    color: var(--white); font-size: 0.78rem; font-weight: 600;
+    font-family: 'DM Sans', sans-serif; cursor: pointer;
+    transition: all 0.15s; white-space: nowrap;
+  }
+  #add-gym-btn:hover { background: #c95510; border-color: #c95510; }
+
+  #fullscreen-btn {
+    padding: 6px 10px; border-radius: 6px;
+    background: rgba(255,255,255,0.12); border: 1.5px solid rgba(255,255,255,0.25);
+    color: var(--cream); font-size: 1rem; cursor: pointer;
+    transition: all 0.15s; flex-shrink: 0; line-height: 1;
+  }
+  #fullscreen-btn:hover { background: rgba(255,255,255,0.22); }
+
+  /* ── IPHONE NUDGE ───────────────────────────────────────────── */
+  #iphone-nudge {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    z-index: 300; width: calc(100vw - 32px); max-width: 360px;
+  }
+  #iphone-nudge-inner {
+    background: #1a1a2e; color: white;
+    border-radius: 12px; padding: 14px 16px 14px 14px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+    border: 1px solid rgba(255,255,255,0.12);
+    font-size: 0.82rem; line-height: 1.55; position: relative;
+  }
+  #iphone-nudge-inner strong { display: block; margin-bottom: 5px; font-size: 0.88rem; }
+  #iphone-nudge-inner p { margin: 0; color: rgba(255,255,255,0.8); }
+  #iphone-nudge-close {
+    position: absolute; top: 10px; right: 12px;
+    cursor: pointer; font-size: 0.8rem; opacity: 0.6;
+  }
+  #iphone-nudge-close:hover { opacity: 1; }
+
+  /* ── ADD GYM MODAL ──────────────────────────────────────────── */
+  #add-gym-overlay {
+    display: none; position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  #add-gym-overlay.open { display: flex; }
+  #add-gym-modal {
+    background: var(--cream); border-radius: 14px;
+    width: 100%; max-width: 560px; max-height: 88vh;
+    display: flex; flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    overflow: hidden;
+  }
+  #add-gym-modal-header {
+    background: #000099; color: white;
+    padding: 16px 22px 14px;
+    display: flex; justify-content: space-between; align-items: center;
+    flex-shrink: 0;
+  }
+  #add-gym-modal-header h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem; margin: 0;
+  }
+  #add-gym-modal-header p {
+    font-size: 0.72rem; color: rgba(255,255,255,0.7); margin: 3px 0 0;
+  }
+  #add-gym-modal-close {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: rgba(255,255,255,0.15); border: none;
+    color: white; font-size: 1rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: background 0.15s;
+  }
+  #add-gym-modal-close:hover { background: rgba(255,255,255,0.3); }
+  #add-gym-form-body {
+    overflow-y: auto; padding: 20px 24px 24px;
+  }
+  #add-gym-status {
+    display: none; border-radius: 6px;
+    padding: 10px 14px; margin-bottom: 14px;
+    font-size: 0.82rem; font-weight: 500;
+  }
+  #add-gym-status.success { background: #e8f2e4; color: #2a5e1e; display: block; }
+  #add-gym-status.error   { background: #fff3f3; color: #dc2626; display: block; }
+  .add-gym-row {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    margin-bottom: 10px;
+  }
+  .add-gym-row.full { grid-template-columns: 1fr; }
+  .add-gym-field { display: flex; flex-direction: column; gap: 4px; }
+  .add-gym-field label {
+    font-size: 0.72rem; font-weight: 600; color: var(--stone);
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .add-gym-field input, .add-gym-field select, .add-gym-field textarea {
+    padding: 8px 10px; border: 1.5px solid var(--sand);
+    border-radius: 7px; font-size: 0.82rem;
+    font-family: 'DM Sans', sans-serif;
+    background: var(--white); color: var(--dark);
+    transition: border-color 0.15s;
+  }
+  .add-gym-field input:focus, .add-gym-field select:focus, .add-gym-field textarea:focus {
+    outline: none; border-color: #000099;
+  }
+  .add-gym-checkboxes {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin-bottom: 14px;
+  }
+  .add-gym-check {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 0.78rem; color: var(--dark);
+    background: var(--white); border: 1.5px solid var(--sand);
+    border-radius: 20px; padding: 4px 10px; cursor: pointer;
+    transition: all 0.15s; user-select: none;
+  }
+  .add-gym-check input { display: none; }
+  .add-gym-check.checked { background: #e8f2e4; border-color: #4a8a3e; color: #2a5e1e; }
+  .add-gym-section-label {
+    font-size: 0.7rem; font-weight: 600; color: var(--stone);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    margin: 16px 0 8px;
+  }
+  #add-gym-submit {
+    width: 100%; padding: 11px; border-radius: 8px;
+    background: #000099; border: none; color: white;
+    font-size: 0.88rem; font-weight: 600;
+    font-family: 'DM Sans', sans-serif; cursor: pointer;
+    margin-top: 6px; transition: background 0.15s;
+  }
+  #add-gym-submit:hover { background: #000077; }
+  #add-gym-submit:disabled { background: var(--stone); cursor: not-allowed; }
+
+  /* ── USER GUIDE MODAL ───────────────────────────────────── */
+  #guide-overlay {
+    display: none; position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  #guide-overlay.open { display: flex; }
+  #guide-modal {
+    background: var(--cream); border-radius: 14px;
+    width: 100%; max-width: 680px; max-height: 85vh;
+    display: flex; flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    overflow: hidden;
+  }
+  #guide-modal-header {
+    background: #000099; color: white;
+    padding: 20px 24px 16px;
+    display: flex; justify-content: space-between; align-items: center;
+    flex-shrink: 0;
+  }
+  #guide-modal-header h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem; margin: 0;
+  }
+  #guide-close {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: rgba(255,255,255,0.15); border: none;
+    color: white; font-size: 1rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: background 0.15s;
+  }
+  #guide-close:hover { background: rgba(255,255,255,0.3); }
+  #guide-body {
+    overflow-y: auto; padding: 24px 28px 28px;
+    line-height: 1.65;
+  }
+  .guide-section {
+    margin-bottom: 24px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--sand);
+  }
+  .guide-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .guide-section h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem; color: #000099;
+    margin: 0 0 10px; display: flex; align-items: center; gap: 8px;
+  }
+  .guide-section p { margin: 0 0 8px; font-size: 0.83rem; color: #3a3a30; }
+  .guide-section p:last-child { margin-bottom: 0; }
+  .guide-tip {
+    background: #f0f4ff; border-left: 3px solid #000099;
+    border-radius: 0 6px 6px 0;
+    padding: 8px 12px; margin-top: 8px;
+    font-size: 0.78rem; color: #1a1a60;
+  }
+  .guide-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    margin-top: 10px;
+  }
+  .guide-card {
+    background: var(--warm); border: 1px solid var(--sand);
+    border-radius: 8px; padding: 10px 12px;
+  }
+  .guide-card strong { display: block; font-size: 0.78rem; color: var(--forest); margin-bottom: 3px; }
+  .guide-card span { font-size: 0.73rem; color: var(--stone); }
+  @media (max-width: 500px) {
+    #guide-body { padding: 16px 18px 20px; }
+    .guide-grid { grid-template-columns: 1fr; }
+  }
+
+
+
+  /* ── LANGUAGE MENU ─────────────────────────────────── */
+  #lang-btn {
+    padding: 6px 14px; border-radius: 6px;
+    background: rgba(255,255,255,0.12); border: 1.5px solid rgba(255,255,255,0.25);
+    color: var(--cream); font-size: 0.78rem; font-weight: 600;
+    font-family: 'DM Sans', sans-serif; cursor: pointer;
+    transition: all 0.15s; white-space: nowrap;
+  }
+  #lang-btn:hover { background: rgba(255,255,255,0.22); }
+  #lang-wrap { position: relative; }
+  #lang-dropdown {
+    display: none; position: absolute; top: calc(100% + 6px); right: 0;
+    background: var(--white); border-radius: 8px;
+    box-shadow: var(--shadow); overflow: hidden; min-width: 140px;
+    z-index: 200;
+  }
+  #lang-dropdown.open { display: block; }
+  .lang-opt {
+    display: block; width: 100%; padding: 10px 16px;
+    font-size: 0.82rem; font-family: 'DM Sans', sans-serif;
+    color: #1a1a18; cursor: pointer; transition: background 0.1s;
+    border: none; background: var(--white); text-align: left;
+  }
+  .lang-opt:hover { background: var(--warm); }
+  .lang-opt + .lang-opt { border-top: 1px solid #eee; }
+  .lang-opt.active { font-weight: 700; color: #000099; }
+
+  /* Search bar in header */
+  #search-wrap {
+    flex: 1; max-width: 300px; margin-left: auto;
+    position: relative;
+  }
+  #gym-search {
+    width: 100%; padding: 8px 16px 8px 36px;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 20px; color: var(--white);
+    font-size: 0.85rem; font-family: 'DM Sans', sans-serif;
+    outline: none; transition: background 0.2s, border-color 0.2s;
+  }
+  #gym-search::placeholder { color: rgba(255,255,255,0.55); }
+  #gym-search:focus { background: rgba(255,255,255,0.22); border-color: rgba(255,255,255,0.5); }
+  #search-icon {
+    position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+    color: rgba(255,255,255,0.6); font-size: 0.95rem; pointer-events: none;
+  }
+  #search-results {
+    position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+    background: var(--white); border-radius: var(--radius);
+    box-shadow: var(--shadow); overflow: hidden; max-height: 280px; overflow-y: auto;
+    display: none; z-index: 200;
+  }
+  #search-results.open { display: block; }
+  .search-item {
+    padding: 10px 16px; cursor: pointer; font-size: 0.85rem;
+    border-bottom: 1px solid #f0ece6; transition: background 0.15s;
+  }
+  .search-item:last-child { border-bottom: none; }
+  .search-item:hover { background: var(--warm); }
+  .search-item strong { display: block; color: var(--forest); }
+  .search-item small { color: var(--stone); font-size: 0.75rem; }
+
+  /* ── MAP ─────────────────────────────────────────────── */
+  #map {
+    position: fixed; top: 58px; left: 0; right: 0; bottom: 0;
+  }
+
+  /* ── FILTER BAR ──────────────────────────────────────── */
+  #filters {
+    position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
+    z-index: 50; display: flex; gap: 8px; flex-wrap: nowrap;
+    background: rgba(247,243,236,0.92);
+    backdrop-filter: blur(8px);
+    border-radius: 30px;
+    padding: 7px 12px;
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(200,184,154,0.5);
+  }
+  .filter-btn {
+    padding: 5px 13px; border-radius: 20px; border: 1.5px solid var(--sand);
+    background: transparent; font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem; font-weight: 500; color: var(--stone);
+    cursor: pointer; transition: all 0.18s; white-space: nowrap;
+  }
+  .filter-btn:hover { border-color: var(--forest-m); color: var(--forest); }
+  .filter-btn.active { background: var(--forest); color: var(--white); border-color: var(--forest); }
+  .filter-btn.danger { border-color: #c0392b; color: #c0392b; }
+  .filter-btn.danger:hover { background: #c0392b; color: var(--white); }
+
+  /* ── SIDEBAR PANEL ───────────────────────────────────── */
+  #panel {
+    position: fixed; top: 58px; right: 0; bottom: 0;
+    width: 340px; background: var(--cream);
+    transform: translateX(100%); transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+    z-index: 80; display: flex; flex-direction: column;
+    border-left: 1px solid var(--sand);
+    box-shadow: -6px 0 30px rgba(0,0,0,0.12);
+  }
+  #panel.open { transform: translateX(0); }
+
+  #panel-close {
+    position: absolute; top: 14px; right: 14px;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--warm); border: 1.5px solid var(--sand);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; color: var(--stone); transition: all 0.15s; z-index: 2;
+  }
+  #panel-close:hover { background: var(--forest); color: var(--white); border-color: var(--forest); }
+
+  #panel-header {
+    padding: 22px 20px 16px;
+    border-bottom: 1px solid var(--sand);
+    background: var(--forest);
+    flex-shrink: 0;
+  }
+  #panel-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.25rem; color: var(--white);
+    line-height: 1.3; padding-right: 36px;
+  }
+  #panel-address {
+    font-size: 0.78rem; color: rgba(255,255,255,0.65);
+    margin-top: 6px; line-height: 1.4;
+  }
+
+  /* ── CHAIN BADGE ─────────────────────────────────── */
+  #chain-badge-wrap {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 8px; flex-wrap: wrap;
+  }
+  #chain-badge {
+    font-size: 0.68rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.07em;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: white; border-radius: 20px;
+    padding: 2px 10px;
+  }
+  #chain-filter-btn {
+    font-size: 0.72rem; font-weight: 600;
+    background: var(--orange); border: none;
+    color: white; border-radius: 20px;
+    padding: 3px 10px; cursor: pointer;
+    transition: background 0.15s;
+  }
+  #chain-filter-btn:hover { background: #c95510; }
+
+  /* Chain-mode: hide non-chain markers, highlight chain in navy */
+  /* ── COUNT BADGE ─────────────────────────────────────── */
+  #count-badge {
+    position: fixed; bottom: 28px; right: 60px; z-index: 50;
+    background: var(--forest); color: var(--cream);
+    border-radius: var(--radius); padding: 10px 16px;
+    font-size: 0.78rem; font-weight: 500;
+    box-shadow: var(--shadow);
+  }
+  #count-badge span { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 700; }
+
+  /* ── GYM TOOLTIP ─────────────────────────────────────── */
+  #gym-tooltip {
+    position: fixed; z-index: 9999;
+    background: var(--forest);
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem; font-weight: 500;
+    padding: 5px 10px; border-radius: 7px;
+    pointer-events: none;
+    white-space: nowrap;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.28);
+    opacity: 0; transition: opacity 0.12s;
+    transform: translate(-50%, calc(-100% - 10px));
+  }
+  #gym-tooltip.visible { opacity: 1; }
+
+  /* ── DRAG HANDLE ─────────────────────────────────────── */
+  #panel-drag-handle {
+    display: none;
+    width: 36px; height: 4px; border-radius: 2px;
+    background: var(--sand); margin: 10px auto 0; flex-shrink: 0;
+  }
+
+  /* ── GYM MARKERS ────────────────────────────────────── */
+  .gym-marker {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--orange); border: 3px solid var(--white);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    cursor: pointer; transition: transform 0.15s;
+  }
+  .gym-marker:hover, .gym-marker.selected { transform: scale(1.5); }
+  .gym-marker.selected { background: var(--forest); }
+  .gym-marker.chain-dim { display: none; }
+  .gym-marker.chain-highlight {
+    background: #000099 !important;
+    box-shadow: 0 0 0 3px white, 0 0 0 5px #000099;
+  }
+
+  #panel-body { flex: 1; overflow-y: auto; padding: 18px 20px; }
+
+  /* ── PANEL TABS ─────────────────────────────────────── */
+  #panel-tabs {
+    display: flex; flex-shrink: 0;
+    border-bottom: 1px solid var(--sand);
+    background: var(--warm);
+  }
+  .panel-tab {
+    flex: 1; padding: 10px 0;
+    font-size: 0.75rem; font-weight: 600; text-align: center;
+    cursor: pointer; color: var(--stone); border: none;
+    background: none; transition: all 0.15s;
+    border-bottom: 2px solid transparent;
+    letter-spacing: 0.04em;
+  }
+  .panel-tab:hover { color: var(--forest); }
+  .panel-tab.active { color: var(--forest); border-bottom-color: var(--forest); background: var(--cream); }
+
+  .panel-tab-content { display: none; flex: 1; overflow-y: auto; }
+  .panel-tab-content.active { display: block; }
+
+  /* ── UPDATE FORM ─────────────────────────────────────── */
+  #update-form { padding: 18px 20px; }
+  #update-form h4 {
+    font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--stone); margin-bottom: 14px;
+  }
+  .update-field { margin-bottom: 14px; }
+  .update-field label {
+    display: block; font-size: 0.73rem; font-weight: 500;
+    color: var(--forest); margin-bottom: 4px;
+  }
+  .update-field input, .update-field textarea {
+    width: 100%; box-sizing: border-box;
+    padding: 8px 10px; border-radius: 6px;
+    border: 1.5px solid var(--sand); background: var(--white);
+    font-size: 0.8rem; font-family: 'DM Sans', sans-serif;
+    color: #3a3a30; transition: border-color 0.15s;
+    resize: vertical;
+  }
+  .update-field input:focus, .update-field textarea:focus {
+    outline: none; border-color: var(--forest);
+  }
+  .update-field input::placeholder, .update-field textarea::placeholder {
+    color: #b5aba0;
+  }
+  .closed-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 8px;
+    background: #fff3f3; border: 1.5px solid #fca5a5;
+    margin-bottom: 14px; cursor: pointer;
+  }
+  .closed-row input[type=checkbox] { accent-color: #dc2626; width: 16px; height: 16px; cursor: pointer; }
+  .closed-row label { font-size: 0.8rem; font-weight: 500; color: #dc2626; cursor: pointer; margin: 0; }
+  #update-submit {
+    width: 100%; padding: 10px;
+    background: var(--forest); color: var(--white);
+    border: none; border-radius: var(--radius);
+    font-size: 0.82rem; font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer; transition: background 0.15s;
+    margin-top: 4px;
+  }
+  #update-submit:hover { background: #1a4a2e; }
+  #update-submit:disabled { background: var(--stone); cursor: not-allowed; }
+  #update-status {
+    margin-top: 10px; padding: 10px 12px;
+    border-radius: 8px; font-size: 0.78rem; text-align: center;
+    display: none;
+  }
+  #update-status.success { background: #e8f2e4; color: #2a5e1e; display: block; }
+  #update-status.error   { background: #fff3f3; color: #dc2626; display: block; }
+
+  /* Price badge */
+  .price-badge {
+    display: inline-block;
+    background: var(--orange); color: var(--white);
+    font-size: 0.85rem; font-weight: 600;
+    padding: 4px 12px; border-radius: 20px; margin-bottom: 14px;
+  }
+  .price-badge.unknown { background: var(--stone); }
+
+  /* Amenity tags */
+  .amenity-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+  .tag {
+    display: flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 500;
+  }
+  .tag.yes { background: #e8f2e4; color: #2a5e1e; }
+  .tag.no  { background: #f0ede8; color: #9a9080; }
+
+  /* Transport */
+  .transport-section { margin-bottom: 18px; }
+  .transport-section h4 { font-size: 0.72rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--stone); margin-bottom: 6px; }
+  .transport-pills { display: flex; flex-wrap: wrap; gap: 5px; }
+  .transport-pill {
+    padding: 3px 9px; background: var(--warm); border: 1px solid var(--sand);
+    border-radius: 6px; font-size: 0.72rem; color: var(--stone); font-weight: 500;
+  }
+
+  /* Links */
+  #panel-links { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+  .panel-link {
+    flex: 1; min-width: 120px;
+    padding: 8px 12px; border-radius: var(--radius);
+    background: var(--warm); border: 1.5px solid var(--sand);
+    text-decoration: none; font-size: 0.78rem; font-weight: 500; color: var(--forest);
+    text-align: center; transition: all 0.15s; cursor: pointer;
+  }
+  .panel-link:hover { background: var(--forest); color: var(--white); border-color: var(--forest); }
+
+  /* ── ISOCHRONE SECTION ───────────────────────────────── */
+  /* ── COMPARE BUTTON ──────────────────────────────────── */
+  #compare-btn {
+    display: inline-block; margin-top: 10px;
+    padding: 5px 14px; border-radius: 20px;
+    border: 1.5px solid rgba(255,255,255,0.35);
+    background: rgba(255,255,255,0.12);
+    color: var(--cream); font-family: 'DM Sans', sans-serif;
+    font-size: 0.72rem; font-weight: 500;
+    cursor: pointer; transition: all 0.15s;
+  }
+  #compare-btn:hover { background: rgba(255,255,255,0.22); border-color: rgba(255,255,255,0.6); }
+  #compare-btn.pinned { background: rgba(255,255,255,0.28); border-color: var(--white); font-weight: 600; }
+  #compare-btn.full { opacity: 0.5; cursor: not-allowed; }
+
+  /* ── TRANSPORT STOPS STATUS ──────────────────────────── */
+  #transport-stops-status {
+    font-size: 0.71rem; color: var(--stone); font-style: italic;
+    margin-top: 5px; min-height: 16px;
+  }
+
+  /* ── TRANSPORT STOP MARKERS ──────────────────────────── */
+  .transport-marker {
+    font-size: 17px; line-height: 1; cursor: default;
+    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.45));
+    transition: transform 0.12s;
+  }
+  .transport-marker:hover { transform: scale(1.25); }
+
+  /* ── COMPARISON TRAY ─────────────────────────────────── */
+  #comparison-tray {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  #comparison-tray:empty { display: none; }
+  .compare-chip {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(247,243,236,0.93); backdrop-filter: blur(8px);
+    border-radius: 10px; padding: 7px 10px 7px 12px;
+    box-shadow: var(--shadow); border: 1px solid rgba(200,184,154,0.5);
+    font-size: 0.76rem; max-width: 230px;
+    animation: chipIn 0.2s ease;
+  }
+  @keyframes chipIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .compare-dot {
+    width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0;
+  }
+  .compare-info { flex: 1; min-width: 0; }
+  .compare-name { color: var(--forest); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .compare-mode { color: var(--stone); font-size: 0.68rem; margin-top: 1px; }
+  .compare-remove {
+    background: none; border: none; cursor: pointer;
+    color: var(--stone); font-size: 0.85rem; padding: 2px 4px;
+    border-radius: 4px; line-height: 1; flex-shrink: 0;
+    transition: color 0.12s;
+  }
+  .compare-remove:hover { color: #c0392b; }
+
+  /* ══════════════════════════════════════════════════════
+     MOBILE STYLES  (≤ 768px)
+  ══════════════════════════════════════════════════════ */
+  @media (max-width: 768px) {
+
+    /* Header: stack into two rows */
+    #header {
+      height: auto;
+      flex-wrap: wrap;
+      padding: 10px 16px 10px;
+      gap: 6px;
+      align-items: center;
+    }
+    #header h1 { font-size: 1rem; }
+    .header-pill { font-size: 0.68rem; padding: 2px 8px; }
+
+    /* Search goes full-width on second row */
+    #search-wrap {
+      order: 3;
+      flex: none;
+      width: 100%;
+      max-width: 100%;
+      margin-left: 0;
+    }
+    #search-results { max-height: 200px; }
+
+    /* Map: starts below taller header (≈ 110px) + filter bar (≈ 46px) */
+    #map { top: 172px; }
+
+    /* Filter bar: full-width horizontal scroll strip */
+    #filters {
+      top: 126px;
+      left: 0; right: 0;
+      transform: none;
+      border-radius: 0;
+      padding: 8px 12px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      justify-content: flex-start;
+      border-left: none; border-right: none; border-top: none;
+      border-bottom: 1px solid rgba(200,184,154,0.4);
+      border-radius: 0;
+      gap: 6px;
+    }
+    #filters::-webkit-scrollbar { display: none; }
+    .filter-btn { font-size: 0.75rem; padding: 5px 11px; flex-shrink: 0; }
+
+    /* Panel: slide up from bottom as a sheet */
+    #panel {
+      top: auto;
+      bottom: 0; left: 0; right: 0;
+      width: 100%;
+      height: 72vh;
+      max-height: 72vh;
+      transform: translateY(100%);
+      border-left: none;
+      border-top: 1px solid var(--sand);
+      border-radius: 18px 18px 0 0;
+      box-shadow: 0 -8px 40px rgba(0,0,0,0.18);
+    }
+    #panel.open { transform: translateY(0); }
+    #panel.minimised { transform: translateY(calc(100% - 72px)); }
+
+    /* Drag handle visible on mobile */
+    #panel-drag-handle { display: block; }
+
+    /* Panel header padding tweak */
+    #panel-header { padding: 14px 20px 14px; }
+    #panel-name { font-size: 1.1rem; padding-right: 40px; }
+
+    /* Larger tap targets for markers */
+    .gym-marker { width: 22px; height: 22px; border-width: 3px; }
+
+    /* Show legend on mobile, compact sizing */
+
+    #imd-legend p { font-size: 0.62rem; }
+
+    /* Count badge: smaller, tucked into corner */
+    #count-badge {
+      bottom: 16px; right: 55px;
+      padding: 7px 12px;
+      font-size: 0.72rem;
+      border-radius: 10px;
+    }
+    #count-badge span { font-size: 0.95rem; }
+
+    /* Mapbox nav controls: move up so they don't overlap bottom sheet */
+    .mapboxgl-ctrl-bottom-right {
+      bottom: 16px !important;
+      right: 12px !important;
+      /* hidden when panel open — handled by JS class */
+    }
+    .panel-open-mobile .mapboxgl-ctrl-bottom-right {
+      bottom: 76vh !important;
+    }
+
+    /* Make panel-close easier to tap */
+    #panel-close {
+      width: 36px; height: 36px; font-size: 1.1rem;
+      top: 12px; right: 12px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- ADD GYM MODAL -->
+<div id="add-gym-overlay" onclick="handleAddGymOverlayClick(event)">
+  <div id="add-gym-modal">
+    <div id="add-gym-modal-header">
+      <div>
+        <h2 data-i18n="addgym_title">➕ Add a Gym</h2>
+        <p data-i18n="addgym_subtitle">Submit a new climbing facility for review by the ECN team</p>
+      </div>
+      <button id="add-gym-modal-close" onclick="toggleAddGym()">✕</button>
+    </div>
+    <div id="add-gym-form-body">
+      <div id="add-gym-status"></div>
+
+      <div class="add-gym-section-label" data-i18n="addgym_details">Gym Details</div>
+      <div class="add-gym-row full">
+        <div class="add-gym-field">
+          <label data-i18n="addgym_name">Gym Name *</label>
+          <input type="text" id="ag-name" placeholder="e.g. The Climbing Hangar">
+        </div>
+      </div>
+      <div class="add-gym-row full">
+        <div class="add-gym-field">
+          <label data-i18n="addgym_address">Full Address *</label>
+          <input type="text" id="ag-address" placeholder="Street, City, Postcode">
+        </div>
+      </div>
+      <div class="add-gym-row">
+        <div class="add-gym-field">
+          <label>Website</label>
+          <input type="text" id="ag-website" placeholder="https://…">
+        </div>
+        <div class="add-gym-field">
+          <label>Phone</label>
+          <input type="text" id="ag-phone" placeholder="+44…">
+        </div>
+      </div>
+      <div class="add-gym-row">
+        <div class="add-gym-field">
+          <label data-i18n="addgym_price">Entry Price</label>
+          <input type="text" id="ag-price" placeholder="e.g. £12 day pass">
+        </div>
+        <div class="add-gym-field">
+          <label>Type</label>
+          <select id="ag-type">
+            <option value="">— Select —</option>
+            <option value="Standalone gym">Standalone gym</option>
+            <option value="Leisure centre wall">Leisure centre wall</option>
+            <option value="University wall">University wall</option>
+            <option value="Outdoor wall">Outdoor wall</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="add-gym-section-label" data-i18n="addgym_facilities">Facilities</div>
+      <div class="add-gym-checkboxes" id="ag-facilities">
+        <label class="add-gym-check"><input type="checkbox" value="Bouldering">🪨 Bouldering</label>
+        <label class="add-gym-check"><input type="checkbox" value="Ropes">🧗 Ropes</label>
+        <label class="add-gym-check"><input type="checkbox" value="Autobelay">⚙️ Autobelay</label>
+        <label class="add-gym-check"><input type="checkbox" value="Café">☕ Café</label>
+        <label class="add-gym-check"><input type="checkbox" value="Moon/Kilter/TB">🌙 Moonboard</label>
+        <label class="add-gym-check"><input type="checkbox" value="Kilter">🟠 Kilter Board</label>
+        <label class="add-gym-check"><input type="checkbox" value="Tension">🔵 Tension Board</label>
+        <label class="add-gym-check"><input type="checkbox" value="Woody">🟤 Woody Board</label>
+        <label class="add-gym-check"><input type="checkbox" value="Training Space">💪 Training Space</label>
+        <label class="add-gym-check"><input type="checkbox" value="Kids Zone">👶 Kids Zone</label>
+        <label class="add-gym-check"><input type="checkbox" value="Speed Wall">⚡ Speed Wall</label>
+        <label class="add-gym-check"><input type="checkbox" value="Retail">🛍️ Retail</label>
+        <label class="add-gym-check"><input type="checkbox" value="Parking">🅿️ Parking</label>
+      </div>
+
+      <div class="add-gym-section-label" data-i18n="addgym_additional">Additional Info</div>
+      <div class="add-gym-row full">
+        <div class="add-gym-field">
+          <label data-i18n="addgym_notes">Notes</label>
+          <textarea id="ag-notes" rows="3" placeholder="Opening hours, membership options, anything else useful…"></textarea>
+        </div>
+      </div>
+      <div class="add-gym-row full">
+        <div class="add-gym-field">
+          <label>Your name / contact (optional)</label>
+          <input type="text" id="ag-submitter" placeholder="So we can follow up if needed">
+        </div>
+      </div>
+
+      <button id="add-gym-submit" onclick="submitAddGym()">Submit for Review</button>
+      <button id="add-another-btn" onclick="resetAddGymForm()" style="display:none; width:100%; padding:11px; border-radius:8px; background:#2a4520; border:none; color:white; font-size:0.88rem; font-weight:600; font-family:'DM Sans',sans-serif; cursor:pointer; margin-top:8px; transition:background 0.15s;">+ Add Another Gym</button>
+      <p style="font-size:0.68rem;color:var(--stone);margin-top:10px;line-height:1.5;text-align:center;">
+        All submissions are reviewed by the ECN team before appearing on the map. Fields marked * are required.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- USER GUIDE MODAL -->
+<div id="guide-overlay" onclick="handleGuideOverlayClick(event)">
+  <div id="guide-modal">
+    <div id="guide-modal-header">
+      <div>
+        <h2 data-i18n="guide_title">ECN Gym Map Guide</h2>
+      </div>
+      <button id="guide-close" onclick="toggleGuide()">✕</button>
+    </div>
+    <div id="guide-body">
+
+      <div class="guide-section">
+        <h3>🗺️ Getting Started</h3>
+        <p>The ECN Gym Map is a free resource showing climbing facilities across the UK, Ireland and Europe. Over 340 mapped sites are shown as orange dots. Pan and zoom using your mouse or trackpad — on mobile, use touch gestures.</p>
+        <div class="guide-tip">💡 Click any orange marker to open that gym's profile. Search by name using the search bar in the header.</div>
+      </div>
+
+      <div class="guide-section">
+        <h3>🏟️ Gym Profiles</h3>
+        <p>Click any marker to open the gym's profile panel. Each listing shows the gym's name, address, entry price, website, phone number, and confirmed amenities — bouldering, ropes, café, training boards, kids zone and more.</p>
+        <p>The <strong>Public Transport Nearby</strong> section shows the number of stops within 600m, pulled live from OpenStreetMap.</p>
+        <div class="guide-tip">💡 If a gym belongs to a chain, a badge appears in the panel — click <strong>Show all locations</strong> to highlight every site in that group on the map.</div>
+      </div>
+
+      <div class="guide-section">
+        <h3>🔎 Search & Filter</h3>
+        <p>Use the search bar in the header to find a gym by name. Results appear as you type — click any result to fly to that gym and open its profile.</p>
+        <p>The filter bar below the header lets you narrow the map to gyms with specific features: bouldering, ropes, autobelay, café, Moonboard, Kilter, Tension, Woody, kids zone, or speed wall.</p>
+      </div>
+
+      <div class="guide-section">
+        <h3>➕ Add a Missing Gym</h3>
+        <p>Know of a facility that isn't on the map? Click <strong>+ Add Gym</strong> in the header to submit it. Provide as much detail as you can — name, address, website, type and amenities. All submissions are reviewed by the ECN team before appearing on the map.</p>
+        <div class="guide-tip">💡 The more detail you provide, the faster we can verify and add the listing.</div>
+      </div>
+
+      <div class="guide-section">
+        <h3>✏️ Suggest a Correction</h3>
+        <p>If a gym's information is outdated or incorrect, open the profile and click the <strong>Update Info</strong> tab. You can submit corrections for the name, address, website, entry price, or report a permanent closure. All submissions are reviewed before any changes are made.</p>
+      </div>
+
+      <div class="guide-section">
+        <h3>📊 ECN Pro</h3>
+        <p>This is the free version of the ECN map. <strong>ECN Pro</strong> adds population density and demographic overlays, adjustable walk/cycle/drive catchment analysis with population counts, competitor gym counts within any catchment zone, and location analysis for any point in Europe.</p>
+        <p>Visit <a href="https://euroclimbing.news/pro" target="_blank" style="color:#000099">euroclimbing.news/pro</a> to find out more.</p>
+      </div>
+
+    </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- LOADING OVERLAY -->
+<div id="loading-overlay">
+  <div id="loading-spinner"></div>
+  <div id="loading-msg">Loading gym data…</div>
+  <div id="loading-sub"></div>
+</div>
+
+<!-- HEADER -->
+<div id="header">
+  <h1 id="header-title">ECN <span>Gym Map</span></h1>
+  <div class="header-pill" data-i18n="region">UK &amp; Europe</div>
+  <div id="search-wrap">
+    <span id="search-icon">⌕</span>
+    <input id="gym-search" type="text" placeholder="Search gyms…" autocomplete="off">
+    <div id="search-results"></div>
+  </div>
+  <div id="lang-wrap">
+    <button id="lang-btn" onclick="toggleLangMenu(event)">🌐 EN</button>
+    <div id="lang-dropdown">
+      <div class="lang-opt active" onclick="setLang('en')">🇬🇧 English</div>
+      <div class="lang-opt" onclick="setLang('fr')">🇫🇷 Français</div>
+      <div class="lang-opt" onclick="setLang('de')">🇩🇪 Deutsch</div>
+      <div class="lang-opt" onclick="setLang('it')">🇮🇹 Italiano</div>
+      <div class="lang-opt" onclick="setLang('no')">🇳🇴 Norsk</div>
+      <div class="lang-opt" onclick="setLang('es')">🇪🇸 Español</div>
+    </div>
+  </div>
+  <button id="guide-btn" onclick="toggleGuide()">? Guide</button>
+  <button id="add-gym-btn" onclick="toggleAddGym()">+ Add Gym</button>
+  <button id="fullscreen-btn" onclick="toggleFullscreen()"
+    title="Open in full screen">
+    <span>⤢</span>
+  </button>
+</div>
+
+<!-- LAYERS PANEL REMOVED -->
+
+<!-- FILTER BAR -->
+<div id="filters">
+  <button class="filter-btn active" data-filter="all" data-i18n="filter_all">All gyms</button>
+  <button class="filter-btn" data-filter="boulders" data-i18n="filter_bouldering">🪨 Bouldering</button>
+  <button class="filter-btn" data-filter="ropes" data-i18n="filter_ropes">🧗 Ropes</button>
+  <button class="filter-btn" data-filter="autobelay" data-i18n="filter_autobelay">⚙️ Autobelay</button>
+  <button class="filter-btn" data-filter="cafe" data-i18n="filter_cafe">☕ Café</button>
+  <button class="filter-btn" data-filter="moonboard" data-i18n="filter_moonboard">🌙 Moonboard</button>
+  <button class="filter-btn" data-filter="kilter" data-i18n="filter_kilter">🟠 Kilter</button>
+  <button class="filter-btn" data-filter="tension" data-i18n="filter_tension">🔵 Tension</button>
+  <button class="filter-btn" data-filter="woody" data-i18n="filter_woody">🟤 Woody</button>
+  <button class="filter-btn" data-filter="kids" data-i18n="filter_kids">👶 Kids Zone</button>
+  <button class="filter-btn" data-filter="speed" data-i18n="filter_speed">⚡ Speed Wall</button>
+</div>
+
+<!-- MAP -->
+<div id="map"></div>
+<div id="gym-tooltip"></div>
+
+<!-- SIDEBAR PANEL -->
+<div id="panel">
+  <div id="panel-drag-handle"></div>
+  <button id="panel-close" onclick="closePanel()">✕</button>
+  <div id="panel-header">
+    <div id="panel-name">Gym Name</div>
+    <div id="panel-address">Address</div>
+    <div id="chain-badge-wrap" style="display:none">
+      <span id="chain-badge"></span>
+      <button id="chain-filter-btn" onclick="filterByChain()"></button>
+    </div>
+  </div>
+  <div id="panel-tabs">
+    <button class="panel-tab active" id="tab-info" data-i18n="tab_info" onclick="switchPanelTab('info')">📋 Info</button>
+    <button class="panel-tab"        id="tab-update" data-i18n="tab_update" onclick="switchPanelTab('update')">✏️ Update Info</button>
+  </div>
+
+  <!-- INFO TAB -->
+  <div class="panel-tab-content active" id="tab-content-info">
+  <div id="panel-body">
+    <div id="panel-price"></div>
+    <div id="panel-links"></div>
+    <div class="transport-section">
+      <h4 data-i18n="transport_heading">Public Transport Nearby</h4>
+      <div id="panel-transport" class="transport-pills"></div>
+      <div id="transport-stops-status"></div>
+    </div>
+    <div class="amenity-grid" id="amenity-grid"></div>
+  </div>
+  </div>
+
+  <!-- UPDATE TAB -->
+  <div class="panel-tab-content" id="tab-content-update">
+  <div id="update-form">
+    <div id="update-status"></div>
+    <h4><span data-i18n="update_heading">Suggest a correction for </span><span id="update-gym-name" style="font-style:italic;text-transform:none;letter-spacing:0"></span></h4>
+
+    <div class="update-field">
+      <label data-i18n="update_name">Name correction</label>
+      <input type="text" id="uf-name" placeholder="Corrected gym name…">
+    </div>
+    <div class="update-field">
+      <label data-i18n="update_address">Address / location fix</label>
+      <input type="text" id="uf-address" placeholder="Corrected address…">
+    </div>
+    <div class="update-field">
+      <label data-i18n="update_website">Website / contact update</label>
+      <input type="text" id="uf-website" placeholder="https://…">
+    </div>
+    <div class="update-field">
+      <label data-i18n="update_price">Entry price update</label>
+      <input type="text" id="uf-price" placeholder="e.g. £12 day pass, £8 student…">
+    </div>
+    <div class="closed-row">
+      <input type="checkbox" id="uf-closed">
+      <label for="uf-closed" data-i18n="update_closed">⚠️ Report this gym as permanently closed</label>
+    </div>
+    <div class="update-field">
+      <label data-i18n="update_notes">Other notes</label>
+      <textarea id="uf-notes" rows="3" placeholder="Anything else we should know…"></textarea>
+    </div>
+
+    <button id="update-submit" onclick="submitUpdate()" data-i18n="update_submit">Send Update</button>
+    <p style="font-size:0.68rem;color:var(--stone);margin-top:12px;line-height:1.5;">
+      Updates are reviewed by the ECN team before any changes are made. Thank you for keeping the map accurate.
+    </p>
+  </div>
+  </div>
+</div>
+
+<!-- BOTTOM-LEFT: comparison tray stacked above legend -->
+
+<!-- COUNT -->
+<div id="count-badge"><span id="visible-count">314</span> gyms</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  CONFIG — update this URL when you change your Google Sheet
+// ═══════════════════════════════════════════════════════════════
+const SHEET_CSV_URL = '/api/gyms';
+const UPDATE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbyc_uYxrwshIsL1Bs3s7G4cpAbezfU-gqnwZe3aDjX9rt6qOIi2cuTe83hLLEntKMGs/exec';
+
+// ── CONFIG ──────────────────────────────────────────────────────
+// How to get this URL:
+//   1. In Google Sheets: File → Share → Publish to web
+//   2. Select your sheet tab, choose "Comma-separated values (.csv)"
+//   3. Click Publish, copy the URL, paste it above.
+// ═══════════════════════════════════════════════════════════════
+
+const MAPBOX_TOKEN = 'pk.eyJ1IjoiZXVyb2NsaW1iaW5nbmV3cyIsImEiOiJjbWxrdmI3bm4wMHk3M2dzOWM2dmwzNm5hIn0.zqw4vH5VDALlkPZC9xY8HA';
+mapboxgl.accessToken = MAPBOX_TOKEN;
+
+// ── MAP INIT ──────────────────────────────────────────────
+const map = new mapboxgl.Map({
+  container: 'map',
+  style: 'mapbox://styles/mapbox/outdoors-v12',
+  center: [-2.5, 54.5],
+  zoom: 5.5,
+  minZoom: 4
+});
+map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
+
+// ── STATE ─────────────────────────────────────────────────
+let GYMS = null;
+let markers = [];
+let selectedMarker = null;
+let selectedGym = null;
+let selectedGymIdx = null;
+let activeFilter = 'all';
+let transportMarkers = [];
+
+function clearTransportMarkers() {
+  transportMarkers.forEach(m => m.remove());
+  transportMarkers = [];
+  const el = document.getElementById('panel-transport');
+  if (el) el.innerHTML = '';
+  const status = document.getElementById('transport-stops-status');
+  if (status) status.textContent = '';
+}
+
+// ── CSV PARSER ────────────────────────────────────────────
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+
+  // Auto-detect delimiter: tab or comma
+  const firstLine = lines[0];
+  const delimiter = firstLine.includes('\t') ? '\t' : ',';
+
+  // Parse a single line respecting quoted fields (comma mode only)
+  function parseLine(line) {
+    if (delimiter === '\t') return line.split('\t').map(v => v.trim().replace(/^"|"$/g, ''));
+    const row = [];
+    let current = '', inQuotes = false;
+    for (let c = 0; c < line.length; c++) {
+      const ch = line[c];
+      if (ch === '"') { inQuotes = !inQuotes; }
+      else if (ch === ',' && !inQuotes) { row.push(current.trim()); current = ''; }
+      else { current += ch; }
+    }
+    row.push(current.trim());
+    return row;
+  }
+
+  const headers = parseLine(firstLine).map(h => h.replace(/^"|"$/g, '').trim());
+  console.log('CSV headers detected:', headers);
+
+  const features = [];
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const row = parseLine(lines[i]);
+
+    const get = (colName) => {
+      const idx = headers.findIndex(h => h.toLowerCase().trim() === colName.toLowerCase().trim());
+      return idx >= 0 ? (row[idx] || '').trim() : '';
+    };
+
+    const lat = parseFloat(get('Latitude'));
+    const lng = parseFloat(get('Longitude'));
+    if (isNaN(lat) || isNaN(lng)) continue;
+
+    features.push({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [lng, lat] },
+      properties: {
+        name:      get('Name'),
+        address:   get('Address'),
+        website:   get('Website'),
+        phone:     get('Phone'),
+        cafe:      get('Café') || get('Cafe'),
+        ropes:     get('Ropes'),
+        autobelay: get('Autobelay'),
+        boulders:  get('Boulders'),
+        speed:     get('Speed'),
+        moonboard: get('Moon/Kilter/TB') || get('Moonboard'),
+        kilter:    get('Kilter'),
+        tension:   get('Tension'),
+        woody:     get('Woody'),
+        training:  get('Training Space'),
+        kids:      get('Kids Zone'),
+        retail:    get('Retail'),
+        transport: get('Public Transport'),
+        parking:   get('Parking'),
+        price:     get('Peak Entry Price'),
+        chain:     get('Chain'),
+      }
+    });
+  }
+  return { type: 'FeatureCollection', features };
+}
+
+// ── LOADING SCREEN ────────────────────────────────────────
+function showLoading(msg) {
+  document.getElementById('loading-overlay').style.display = 'flex';
+  document.getElementById('loading-msg').textContent = msg;
+}
+function hideLoading() {
+  document.getElementById('loading-overlay').style.display = 'none';
+}
+function showError(msg) {
+  document.getElementById('loading-overlay').style.display = 'flex';
+  document.getElementById('loading-spinner').style.display = 'none';
+  document.getElementById('loading-msg').textContent = msg;
+  document.getElementById('loading-sub').textContent = 'Check the SHEET_CSV_URL in the HTML config, then reload.';
+}
+
+// ── FETCH DATA ────────────────────────────────────────────
+async function loadGyms() {
+  showLoading(t('loading_msg'));
+  try {
+    const resp = await fetch(SHEET_CSV_URL);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const text = await resp.text();
+    GYMS = parseCSV(text);
+    if (GYMS.features.length === 0) throw new Error('No gyms parsed — check column headers');
+    console.log('GYMS loaded:', GYMS.features.length, '| map.loaded():', map.loaded());
+    document.getElementById('visible-count').textContent = GYMS.features.length;
+    updateCountBadge();
+    hideLoading();
+    if (map.loaded()) {
+      console.log('Building markers immediately');
+      buildMarkers();
+    } else {
+      console.log('Map not ready yet — waiting for load event');
+    }
+  } catch (err) {
+    console.error('Failed to load gym data:', err);
+    showError(`⚠ Could not load gym data: ${err.message}`);
+  }
+}
+
+// ── RENDER MARKERS ────────────────────────────────────────
+function matchesFilter(props, filter) {
+  if (filter === 'all') return true;
+  if (filter === 'boulders') return props.boulders === 'Y';
+  if (filter === 'ropes')     return props.ropes     === 'Y';
+  if (filter === 'autobelay') return props.autobelay === 'Y' || props.ropes === 'AUTOBELAY';
+  if (filter === 'cafe') return props.cafe && props.cafe.toUpperCase() === 'Y';
+  if (filter === 'moonboard') return props.moonboard === 'Y';
+  if (filter === 'kilter')    return props.kilter    === 'Y';
+  if (filter === 'tension')   return props.tension   === 'Y';
+  if (filter === 'woody')     return props.woody     === 'Y';
+  if (filter === 'kids') return props.kids === 'Y';
+  if (filter === 'speed') return props.speed === 'Y';
+  return true;
+}
+
+function buildMarkers() {
+  if (!GYMS) return;
+  console.log('buildMarkers called, features:', GYMS.features.length);
+  markers.forEach(m => m.marker.remove());
+  markers = [];
+  let count = 0;
+  GYMS.features.forEach((f, i) => {
+    const p = f.properties;
+    if (!matchesFilter(p, activeFilter)) return;
+    count++;
+    const el = document.createElement('div');
+    el.className = 'gym-marker';
+    el.dataset.idx = i;
+    const m = new mapboxgl.Marker({ element: el })
+      .setLngLat(f.geometry.coordinates)
+      .addTo(map);
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectGym(i, el);
+    });
+    const tooltip = document.getElementById('gym-tooltip');
+    el.addEventListener('mouseenter', (e) => {
+      tooltip.textContent = p.name;
+      tooltip.style.left = e.clientX + 'px';
+      tooltip.style.top  = e.clientY + 'px';
+      tooltip.classList.add('visible');
+    });
+    el.addEventListener('mousemove', (e) => {
+      tooltip.style.left = e.clientX + 'px';
+      tooltip.style.top  = e.clientY + 'px';
+    });
+    el.addEventListener('mouseleave', () => {
+      tooltip.classList.remove('visible');
+    });
+    markers.push({ marker: m, el, idx: i });
+  });
+  console.log('buildMarkers complete, count:', count, 'markers array:', markers.length);
+  document.getElementById('visible-count').textContent = count;
+}
+
+// ── SELECT GYM ────────────────────────────────────────────
+function selectGym(idx, el) {
+  if (selectedMarker) selectedMarker.classList.remove('selected');
+  selectedMarker = el;
+  el.classList.add('selected');
+  selectedGym = GYMS.features[idx];
+  selectedGymIdx = idx;
+  // Clear tooltip immediately on tap (no mouseleave on mobile)
+  const tooltip = document.getElementById('gym-tooltip');
+  if (tooltip) tooltip.classList.remove('visible');
+  clearTransportMarkers();
+  showPanel(selectedGym.properties, idx);
+  map.flyTo({ center: selectedGym.geometry.coordinates, zoom: Math.max(map.getZoom(), 13), duration: 800 });
+  const [lng, lat] = selectedGym.geometry.coordinates;
+  fetchTransportStops(lat, lng);
+}
+
+// ── PANEL ─────────────────────────────────────────────────
+function showPanel(p, idx) {
+  document.getElementById('panel-name').textContent = p.name;
+  document.getElementById('panel-address').textContent = p.address;
+  populateUpdateGymContext(p.name);
+
+  // Chain badge
+  const chainWrap = document.getElementById('chain-badge-wrap');
+  const chainBadge = document.getElementById('chain-badge');
+  const chainBtn   = document.getElementById('chain-filter-btn');
+  if (p.chain && p.chain.trim() !== '') {
+    const chainName = p.chain.trim();
+    const chainCount = GYMS.features.filter(f =>
+      f.properties.chain && f.properties.chain.trim() === chainName
+    ).length;
+    chainBadge.textContent = '🔗 ' + chainName;
+    chainBtn.textContent   = t('chain_show') + chainCount + (chainCount !== 1 ? t('chain_suffix_p') : t('chain_suffix_s'));
+    chainBtn.dataset.chain = chainName;
+    chainWrap.style.display = 'flex';
+  } else {
+    chainWrap.style.display = 'none';
+    clearChainHighlight();
+  }
+
+  const priceEl = document.getElementById('panel-price');
+  priceEl.innerHTML = (p.price && p.price !== '')
+    ? `<div class="price-badge">${t('price_prefix')}${p.price}</div>`
+    : `<div class="price-badge unknown">${t('price_unknown')}</div>`;
+
+  const linksEl = document.getElementById('panel-links');
+  let linksHtml = '';
+  if (p.website) linksHtml += `<a href="${p.website}" class="panel-link" target="_blank" rel="noopener">🌐 Website</a>`;
+  if (p.phone)   linksHtml += `<a href="tel:${p.phone}" class="panel-link">📞 ${p.phone}</a>`;
+  linksEl.innerHTML = linksHtml;
+
+  const transEl = document.getElementById('panel-transport');
+  if (p.transport && p.transport !== 'NONE' && p.transport !== '') {
+    const modes = p.transport.split(',').map(t => t.trim()).filter(Boolean);
+    transEl.innerHTML = modes.map(m => `<span class="transport-pill">${transportLabel(m)}</span>`).join('');
+  } else {
+    transEl.innerHTML = `<span class="transport-pill">${t('transport_none')}</span>`;
+  }
+  document.getElementById('transport-stops-status').textContent = '';
+
+  const amenities = [
+    { key: 'boulders',  label: '🪨 Bouldering' },
+    { key: 'ropes',     label: '🧗 Ropes' },
+    { key: 'autobelay', label: '⚙️ Autobelay' },
+    { key: 'cafe',      label: '☕ Café' },
+    { key: 'moonboard', label: '🌙 Moonboard' },
+    { key: 'kilter',    label: '🟠 Kilter Board' },
+    { key: 'tension',   label: '🔵 Tension Board' },
+    { key: 'woody',     label: '🟤 Woody Board' },
+    { key: 'training',  label: '💪 Training Space' },
+    { key: 'kids',      label: '👶 Kids Zone' },
+    { key: 'speed',     label: '⚡ Speed Wall' },
+    { key: 'retail',    label: '🛍️ Retail' },
+    { key: 'parking',   label: '🅿️ Parking' },
+  ];
+  document.getElementById('amenity-grid').innerHTML = amenities
+    .filter(a => p[a.key] === 'Y' || p[a.key] === 'AUTOBELAY')
+    .map(a => `<div class="tag yes">✓ ${a.label}</div>`)
+    .join('') || '<div style="font-size:0.78rem;color:var(--stone)">' + t('amenity_none') + '</div>';
+
+  document.getElementById('panel').classList.add('open');
+  document.body.classList.add('panel-open-mobile');
+}
+
+function transportLabel(mode) {
+  const icons = { BUS:'🚌 Bus', TRAIN:'🚂 Train', TRAM:'🚃 Tram',
+    UNDERGROUND:'🚇 Underground', METRO:'🚇 Metro', FERRY:'⛴️ Ferry', TRAM_TRAIN:'🚈 Tram-Train' };
+  return icons[mode.toUpperCase()] || mode;
+}
+
+// ── MOBILE PANEL SWIPE TO DISMISS ────────────────────────────────
+(function() {
+  function addSwipeMinimise(handleEl, panelEl, onMinimise, onRestore) {
+    let startY = 0, startTime = 0;
+    handleEl.addEventListener('touchstart', e => {
+      startY    = e.touches[0].clientY;
+      startTime = Date.now();
+      panelEl.style.transition = 'none';
+    }, { passive: true });
+    handleEl.addEventListener('touchmove', e => {
+      const dy = e.touches[0].clientY - startY;
+      if (dy > 0) panelEl.style.transform = `translateY(${dy}px)`;
+    }, { passive: true });
+    handleEl.addEventListener('touchend', e => {
+      const dy      = e.changedTouches[0].clientY - startY;
+      const elapsed = Date.now() - startTime;
+      panelEl.style.transition = '';
+      panelEl.style.transform  = '';
+      if ((elapsed < 250 && dy > 40) || dy > 120) {
+        if (panelEl.classList.contains('minimised')) onRestore();
+        else onMinimise();
+      }
+    });
+    handleEl.addEventListener('click', () => {
+      if (panelEl.classList.contains('minimised')) onRestore();
+    });
+  }
+  const gymHandle = document.getElementById('panel-drag-handle');
+  const gymPanel  = document.getElementById('panel');
+  if (gymHandle && gymPanel) {
+    addSwipeMinimise(
+      gymHandle, gymPanel,
+      () => {
+        gymPanel.classList.remove('open');
+        gymPanel.classList.add('minimised');
+      },
+      () => { gymPanel.classList.remove('minimised'); gymPanel.classList.add('open'); }
+    );
+  }
+})();
+
+function closePanel() {
+  document.getElementById('panel').classList.remove('open');
+  document.body.classList.remove('panel-open-mobile');
+  if (selectedMarker) selectedMarker.classList.remove('selected');
+  selectedMarker = null;
+  selectedGym = null;
+  selectedGymIdx = null;
+  clearTransportMarkers();
+  clearChainHighlight();
+}
+
+// ── CHAIN HIGHLIGHTING ────────────────────────────────────────────
+let chainHighlightActive = false;
+
+function filterByChain() {
+  const chainName = document.getElementById('chain-filter-btn').dataset.chain;
+  if (!chainName) return;
+
+  chainHighlightActive = true;
+
+  // Dim all markers then highlight chain members
+  document.querySelectorAll('.gym-marker').forEach((el, i) => {
+    const props = GYMS.features[i] && GYMS.features[i].properties;
+    if (!props) return;
+    const inChain = props.chain && props.chain.trim() === chainName;
+    el.classList.toggle('chain-dim',       !inChain);
+    el.classList.toggle('chain-highlight',  inChain);
+  });
+
+  // Fit map to show all chain gyms
+  const chainGyms = GYMS.features.filter(f =>
+    f.properties.chain && f.properties.chain.trim() === chainName
+  );
+  if (chainGyms.length > 1) {
+    const coords = chainGyms.map(f => f.geometry.coordinates);
+    const bounds = coords.reduce(
+      (b, c) => b.extend(c),
+      new mapboxgl.LngLatBounds(coords[0], coords[0])
+    );
+    map.fitBounds(bounds, { padding: 80, maxZoom: 12, duration: 800 });
+  }
+
+  // Update button to allow clearing
+  const btn = document.getElementById('chain-filter-btn');
+  btn.textContent = t('chain_clear');
+  btn.onclick = clearChainHighlight;
+}
+
+function clearChainHighlight() {
+  if (!chainHighlightActive) return;
+  chainHighlightActive = false;
+  document.querySelectorAll('.gym-marker').forEach(el => {
+    el.classList.remove('chain-dim', 'chain-highlight');
+  });
+  const btn = document.getElementById('chain-filter-btn');
+  if (btn) {
+    const chainName = document.getElementById('chain-badge-wrap').dataset && btn.dataset.chain;
+    const chainCount = chainName ? GYMS.features.filter(f =>
+      f.properties.chain && f.properties.chain.trim() === chainName
+    ).length : 0;
+    btn.textContent = t('chain_show') + chainCount + (chainCount !== 1 ? t('chain_suffix_p') : t('chain_suffix_s'));
+    btn.onclick = filterByChain;
+  }
+}
+
+// ── MAP CLICK HANDLER ─────────────────────────────────────────────
+map.on('click', e => {
+  const clickedMarker = e.originalEvent.target.closest('.gym-marker');
+  if (clickedMarker) return;
+  const panel = document.getElementById('panel');
+  if (panel.classList.contains('minimised') || panel.classList.contains('open')) {
+    closePanel();
+    panel.classList.remove('minimised');
+    return;
+  }
+});
+
+// ── USER GUIDE ────────────────────────────────────────────────────
+function toggleGuide() {
+  document.getElementById('guide-overlay').classList.toggle('open');
+}
+function handleGuideOverlayClick(e) {
+  if (e.target === document.getElementById('guide-overlay')) toggleGuide();
+}
+
+// ── ADD GYM ───────────────────────────────────────────────────────
+function toggleAddGym() {
+  document.getElementById('add-gym-overlay').classList.toggle('open');
+}
+function handleAddGymOverlayClick(e) {
+  if (e.target === document.getElementById('add-gym-overlay')) toggleAddGym();
+}
+
+document.querySelectorAll('#ag-facilities .add-gym-check').forEach(label => {
+  label.addEventListener('click', () => {
+    const cb = label.querySelector('input');
+    setTimeout(() => label.classList.toggle('checked', cb.checked), 0);
+  });
+});
+
+async function submitAddGym() {
+  const name    = document.getElementById('ag-name').value.trim();
+  const address = document.getElementById('ag-address').value.trim();
+  if (!name || !address) {
+    showAddGymStatus('error', t('addgym_empty'));
+    return;
+  }
+  const facilities = [...document.querySelectorAll('#ag-facilities input:checked')]
+    .map(cb => cb.value).join(', ');
+  const payload = new URLSearchParams({
+    timestamp: new Date().toISOString(),
+    type:      'NEW_GYM',
+    name, address,
+    website:   document.getElementById('ag-website').value.trim(),
+    phone:     document.getElementById('ag-phone').value.trim(),
+    price:     document.getElementById('ag-price').value.trim(),
+    gym_type:  document.getElementById('ag-type').value,
+    facilities,
+    notes:     document.getElementById('ag-notes').value.trim(),
+    submitter: document.getElementById('ag-submitter').value.trim(),
+  });
+  const btn = document.getElementById('add-gym-submit');
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+  try {
+    await fetch(UPDATE_SHEET_URL, { method: 'POST', mode: 'no-cors', redirect: 'follow', body: payload });
+    showAddGymStatus('success', t('addgym_success'));
+    btn.textContent = t('addgym_submit');
+    btn.style.display = 'none';
+    document.getElementById('add-another-btn').style.display = 'block';
+    document.getElementById('add-another-btn').textContent = t('add_another');
+    document.getElementById('add-gym-form-body').scrollTop = 0;
+  } catch(e) {
+    showAddGymStatus('error', t('addgym_error'));
+    btn.disabled = false;
+    btn.textContent = 'Submit for Review';
+  }
+}
+
+function showAddGymStatus(type, msg) {
+  const el = document.getElementById('add-gym-status');
+  el.className = type;
+  el.textContent = msg;
+}
+
+// ── PANEL TABS ────────────────────────────────────────────────────
+function switchPanelTab(tab) {
+  document.querySelectorAll('.panel-tab').forEach(el =>
+    el.classList.toggle('active', el.id === `tab-${tab}`));
+  document.querySelectorAll('.panel-tab-content').forEach(el =>
+    el.classList.toggle('active', el.id === `tab-content-${tab}`));
+}
+
+// ── UPDATE FORM ───────────────────────────────────────────────────
+function populateUpdateGymContext(name) {
+  document.getElementById('update-gym-name').textContent = name;
+  ['uf-name','uf-address','uf-website','uf-price','uf-notes'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const cb = document.getElementById('uf-closed');
+  if (cb) cb.checked = false;
+  const status = document.getElementById('update-status');
+  if (status) { status.className = ''; status.textContent = ''; }
+  const btn = document.getElementById('update-submit');
+  if (btn) { btn.disabled = false; btn.textContent = 'Send Update'; }
+}
+
+async function submitUpdate() {
+  const gymName   = document.getElementById('update-gym-name').textContent;
+  const nameCorr  = document.getElementById('uf-name').value.trim();
+  const addrCorr  = document.getElementById('uf-address').value.trim();
+  const webCorr   = document.getElementById('uf-website').value.trim();
+  const priceCorr = document.getElementById('uf-price').value.trim();
+  const isClosed  = document.getElementById('uf-closed').checked;
+  const notes     = document.getElementById('uf-notes').value.trim();
+  if (!nameCorr && !addrCorr && !webCorr && !priceCorr && !isClosed && !notes) {
+    showUpdateStatus('error', t('update_empty'));
+    return;
+  }
+  const btn = document.getElementById('update-submit');
+  btn.disabled = true; btn.textContent = 'Sending...';
+  const payload = new URLSearchParams({
+    timestamp: new Date().toISOString(),
+    gym: gymName, name_corr: nameCorr, addr_corr: addrCorr,
+    web_corr: webCorr, price_corr: priceCorr,
+    closed: isClosed ? 'YES' : '', notes
+  });
+  try {
+    await fetch(UPDATE_SHEET_URL, { method: 'POST', mode: 'no-cors', redirect: 'follow', body: payload });
+    showUpdateStatus('success', t('update_success'));
+    btn.textContent = 'Sent';
+    document.getElementById('panel-body').scrollTop = 0;
+  } catch(e) {
+    showUpdateStatus('error', t('update_error'));
+    btn.disabled = false; btn.textContent = 'Send Update';
+  }
+}
+
+function showUpdateStatus(type, msg) {
+  const el = document.getElementById('update-status');
+  el.className = type; el.textContent = msg;
+}
+
+// ── TRANSPORT STOPS ───────────────────────────────────────────────
+// ── OVERPASS TRANSPORT HELPER ────────────────────────────────────
+const OVERPASS_ENDPOINTS = [
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass-api.de/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+];
+async function fetchOverpass(query) {
+  const body = 'data=' + encodeURIComponent(query);
+  const attempts = OVERPASS_ENDPOINTS.map(endpoint =>
+    fetch(endpoint, { method: 'POST', body })
+      .then(r => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)))
+  );
+  return Promise.any(attempts);
+}
+
+function getTransportIcon(tags) {
+  if (!tags) return '🚏';
+  const railway = (tags.railway || '').toLowerCase();
+  const station = (tags.station || '').toLowerCase();
+  const subway  = (tags.subway  || '').toLowerCase();
+  if (railway === 'station' || railway === 'halt') {
+    if (station === 'subway' || subway === 'yes') return '🚇';
+    if (station === 'light_rail' || railway === 'light_rail') return '🚈';
+    return '🚂';
+  }
+  if (railway === 'tram_stop') return '🚃';
+  return '🚌';
+}
+
+async function fetchTransportStops(lat, lng) {
+  const statusEl = document.getElementById('transport-stops-status');
+  const pillsEl  = document.getElementById('panel-transport');
+  if (statusEl) statusEl.textContent = t('transport_loading');
+  const query = `[out:json][timeout:15];(node["highway"="bus_stop"](around:600,${lat},${lng});node["railway"="station"](around:600,${lat},${lng});node["railway"="halt"](around:600,${lat},${lng});node["railway"="tram_stop"](around:600,${lat},${lng});node["station"="subway"](around:600,${lat},${lng}););out body;`;
+  try {
+    const data = await fetchOverpass(query);
+    if (!data.elements || data.elements.length === 0) {
+      if (statusEl) statusEl.textContent = t('transport_none_nearby'); return;
+    }
+    const seen = new Set(); let count = 0;
+    const typeCounts = { rail: 0, tram: 0, bus: 0 };
+    data.elements.forEach(el => {
+      const icon = getTransportIcon(el.tags);
+      const name = el.tags.name || '';
+      const key = icon + '-' + name;
+      if (seen.has(key) && name) return;
+      seen.add(key);
+      if (['\u{1F682}','\u{1F687}','\u{1F688}'].includes(icon)) typeCounts.rail++;
+      else if (icon === '\u{1F683}') typeCounts.tram++;
+      else typeCounts.bus++;
+      count++;
+      const div = document.createElement('div');
+      div.className = 'transport-marker'; div.textContent = icon; div.title = name || icon;
+      const m = new mapboxgl.Marker({ element: div, anchor: 'center' }).setLngLat([el.lon, el.lat]).addTo(map);
+      transportMarkers.push(m);
+    });
+    const parts = [];
+    if (typeCounts.rail > 0) parts.push(typeCounts.rail + t('transport_rail'));
+    if (typeCounts.tram > 0) parts.push(typeCounts.tram + t('transport_tram'));
+    if (typeCounts.bus  > 0) parts.push(typeCounts.bus + t('transport_bus'));
+    if (pillsEl) pillsEl.innerHTML = '<span class="transport-pill"> ' + count + t('transport_stops') + '</span>';
+    if (statusEl) statusEl.textContent = parts.join(' - ');
+  } catch(e) { if (statusEl) statusEl.textContent = t('transport_error'); }
+}
+
+function toggleFullscreen() {
+  // If embedded in an iframe, open in a new tab for a full experience
+  if (window.self !== window.top) {
+    window.open(window.location.href, '_blank');
+    return;
+  }
+  // Otherwise use native fullscreen
+  const el = document.documentElement;
+  if (!document.fullscreenElement) {
+    const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
+    if (req) req.call(el).catch(err => console.warn('Fullscreen failed:', err));
+  } else {
+    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if (exit) exit.call(document).catch(err => console.warn('Exit fullscreen failed:', err));
+  }
+}
+
+// ── FILTER BUTTONS ────────────────────────────────────────────────
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter = btn.dataset.filter;
+    buildMarkers();
+    if (activeFilter !== 'all') {
+      document.getElementById('panel').classList.remove('open');
+      document.body.classList.remove('panel-open-mobile');
+      clearTransportMarkers();
+    }
+  });
+});
+
+// ── MAP LOAD EVENT ────────────────────────────────────────────────
+// If gym data loaded before map, build markers now
+map.once('load', () => {
+  console.log('Map load event fired | GYMS:', GYMS ? GYMS.features.length : 'null');
+  if (GYMS) buildMarkers();
+});
+
+// ── SEARCH ────────────────────────────────────────────────────────
+const searchInput = document.getElementById('gym-search');
+const searchResults = document.getElementById('search-results');
+
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.trim().toLowerCase();
+  if (!q || !GYMS) { searchResults.innerHTML = ''; searchResults.classList.remove('open'); return; }
+  const matches = GYMS.features
+    .filter(f => f.properties.name && f.properties.name.toLowerCase().includes(q))
+    .slice(0, 8);
+  if (matches.length === 0) { searchResults.innerHTML = ''; searchResults.classList.remove('open'); return; }
+  searchResults.innerHTML = matches.map((f, i) => {
+    const idx = GYMS.features.indexOf(f);
+    return `<div class="search-item" data-idx="${idx}">
+      <strong>${f.properties.name}</strong>
+      <span>${f.properties.address || ''}</span>
+    </div>`;
+  }).join('');
+  searchResults.classList.add('open');
+});
+
+searchResults.addEventListener('click', e => {
+  const item = e.target.closest('.search-item');
+  if (!item) return;
+  const idx = parseInt(item.dataset.idx);
+  const gym = GYMS.features[idx];
+  searchInput.value = gym.properties.name;
+  searchResults.innerHTML = '';
+  searchResults.classList.remove('open');
+  map.flyTo({ center: gym.geometry.coordinates, zoom: 14, duration: 800 });
+  const markers = document.querySelectorAll('.gym-marker');
+  if (markers[idx]) selectGym(idx, markers[idx]);
+});
+
+document.addEventListener('click', e => {
+  if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+    searchResults.classList.remove('open');
+  }
+});
+
+
+// ─── INTERNATIONALISATION ───────────────────────────────────────
+var currentLang = 'en';
+
+var TRANSLATIONS = {
+  "en": {
+    "title": "ECN <span>Gym Map</span>",
+    "region": "UK & Europe",
+    "search_placeholder": "Search gyms…",
+    "btn_guide": "? Guide",
+    "guide_title": "ECN Gym Map Guide",
+    "btn_add_gym": "+ Add Gym",
+    "filter_all": "All gyms",
+    "filter_bouldering": "🪨 Bouldering",
+    "filter_ropes": "🧗 Ropes",
+    "filter_autobelay": "⚙️ Autobelay",
+    "filter_cafe": "☕ Café",
+    "filter_moonboard": "🌙 Moonboard",
+    "filter_kilter": "🟠 Kilter",
+    "filter_tension": "🔵 Tension",
+    "filter_woody": "🟤 Woody",
+    "filter_kids": "👶 Kids Zone",
+    "filter_speed": "⚡ Speed Wall",
+    "tab_info": "📋 Info",
+    "tab_update": "✏️ Update Info",
+    "transport_heading": "Public Transport Nearby",
+    "transport_none": "No public transport listed",
+    "transport_loading": "Loading nearby stops...",
+    "transport_none_nearby": "No stops within 600m.",
+    "transport_error": "Could not load stops.",
+    "price_prefix": "Day pass: ",
+    "price_unknown": "Price not listed",
+    "amenity_none": "No amenity data available",
+    "count_suffix": "gyms",
+    "loading_msg": "Loading gym data…",
+    "update_heading": "Suggest a correction for ",
+    "update_name": "Name correction",
+    "update_address": "Address / location fix",
+    "update_website": "Website / contact update",
+    "update_price": "Entry price update",
+    "update_closed": "⚠️ Report this gym as permanently closed",
+    "update_notes": "Other notes",
+    "update_submit": "Send Update",
+    "update_disclaimer": "Updates are reviewed by the ECN team before any changes are made. Thank you for keeping the map accurate.",
+    "update_success": "Update received - thank you! The ECN team will review it shortly.",
+    "update_error": "Something went wrong. Please try again.",
+    "update_empty": "Please fill in at least one field before submitting.",
+    "addgym_title": "➕ Add a Gym",
+    "addgym_subtitle": "Submit a new climbing facility for review by the ECN team",
+    "addgym_details": "Gym Details",
+    "addgym_name": "Gym Name *",
+    "addgym_address": "Full Address *",
+    "addgym_website": "Website",
+    "addgym_phone": "Phone",
+    "addgym_price": "Entry Price",
+    "addgym_type": "Type",
+    "addgym_facilities": "Facilities",
+    "addgym_additional": "Additional Info",
+    "addgym_notes": "Notes",
+    "addgym_submitter": "Your name / contact (optional)",
+    "addgym_submit": "Submit for Review",
+    "add_another": "+ Add Another Gym",
+    "addgym_disclaimer": "All submissions are reviewed by the ECN team before appearing on the map. Fields marked * are required.",
+    "addgym_success": "✓ Thank you! Your submission has been received and will be reviewed by the ECN team.",
+    "addgym_error": "Something went wrong. Please try again or email callum@euroclimbing.news",
+    "addgym_empty": "Please fill in at least the gym name and address.",
+    "chain_show": "Show all ",
+    "chain_clear": "✕ Clear chain view",
+    "chain_suffix_s": " location",
+    "chain_suffix_p": " locations",
+    "transport_stops": " stops within 600m",
+    "transport_rail": " rail",
+    "transport_tram": " tram",
+    "transport_bus": " bus"
+  },
+  "fr": {
+    "title": "ECN <span>Carte des Salles</span>",
+    "region": "Royaume-Uni et Europe",
+    "search_placeholder": "Rechercher une salle…",
+    "btn_guide": "? Guide",
+    "guide_title": "Guide de la Carte ECN",
+    "btn_add_gym": "+ Ajouter",
+    "filter_all": "Toutes",
+    "filter_bouldering": "🪨 Bloc",
+    "filter_ropes": "🧗 Cordes",
+    "filter_autobelay": "⚙️ Moulinette auto",
+    "filter_cafe": "☕ Café",
+    "filter_moonboard": "🌙 Moonboard",
+    "filter_kilter": "🟠 Kilter",
+    "filter_tension": "🔵 Tension",
+    "filter_woody": "🟤 Woody",
+    "filter_kids": "👶 Espace enfants",
+    "filter_speed": "⚡ Mur de vitesse",
+    "tab_info": "📋 Infos",
+    "tab_update": "✏️ Corriger",
+    "transport_heading": "Transports à proximité",
+    "transport_none": "Aucun transport en commun répertorié",
+    "transport_loading": "Chargement des arrêts…",
+    "transport_none_nearby": "Aucun arrêt dans un rayon de 600m.",
+    "transport_error": "Impossible de charger les arrêts.",
+    "price_prefix": "Entrée : ",
+    "price_unknown": "Prix non indiqué",
+    "amenity_none": "Aucune donnée d'équipement disponible",
+    "count_suffix": "salles",
+    "loading_msg": "Chargement des données…",
+    "update_heading": "Suggérer une correction pour ",
+    "update_name": "Correction du nom",
+    "update_address": "Correction d'adresse",
+    "update_website": "Mise à jour site web / contact",
+    "update_price": "Mise à jour du tarif",
+    "update_closed": "⚠️ Signaler cette salle comme fermée définitivement",
+    "update_notes": "Autres remarques",
+    "update_submit": "Envoyer",
+    "update_disclaimer": "Les mises à jour sont vérifiées par l'équipe ECN avant d'être appliquées. Merci de contribuer à la précision de la carte.",
+    "update_success": "Mise à jour reçue — merci ! L'équipe ECN l'examinera prochainement.",
+    "update_error": "Un problème est survenu. Veuillez réessayer.",
+    "update_empty": "Veuillez remplir au moins un champ avant d'envoyer.",
+    "addgym_title": "➕ Ajouter une salle",
+    "addgym_subtitle": "Soumettre un nouveau site d'escalade pour examen par l'équipe ECN",
+    "addgym_details": "Détails de la salle",
+    "addgym_name": "Nom de la salle *",
+    "addgym_address": "Adresse complète *",
+    "addgym_website": "Site web",
+    "addgym_phone": "Téléphone",
+    "addgym_price": "Tarif d'entrée",
+    "addgym_type": "Type",
+    "addgym_facilities": "Équipements",
+    "addgym_additional": "Informations complémentaires",
+    "addgym_notes": "Notes",
+    "addgym_submitter": "Votre nom / contact (facultatif)",
+    "addgym_submit": "Soumettre pour examen",
+    "add_another": "+ Ajouter une autre salle",
+    "addgym_disclaimer": "Toutes les soumissions sont vérifiées par l'équipe ECN avant publication. Les champs marqués * sont obligatoires.",
+    "addgym_success": "✓ Merci ! Votre soumission a été reçue et sera examinée par l'équipe ECN.",
+    "addgym_error": "Un problème est survenu. Veuillez réessayer ou écrire à callum@euroclimbing.news",
+    "addgym_empty": "Veuillez indiquer au moins le nom et l'adresse de la salle.",
+    "chain_show": "Voir les ",
+    "chain_clear": "✕ Fermer la vue chaîne",
+    "chain_suffix_s": " site",
+    "chain_suffix_p": " sites",
+    "transport_stops": " arrêts dans un rayon de 600m",
+    "transport_rail": " ferroviaire",
+    "transport_tram": " tram",
+    "transport_bus": " bus"
+  },
+  "de": {
+    "title": "ECN <span>Kletterhallen-Karte</span>",
+    "region": "UK und Europa",
+    "search_placeholder": "Halle suchen…",
+    "btn_guide": "? Anleitung",
+    "guide_title": "ECN Kletterhallen-Kartenführer",
+    "btn_add_gym": "+ Hinzufügen",
+    "filter_all": "Alle",
+    "filter_bouldering": "🪨 Bouldern",
+    "filter_ropes": "🧗 Seilklettern",
+    "filter_autobelay": "⚙️ Autobelay",
+    "filter_cafe": "☕ Café",
+    "filter_moonboard": "🌙 Moonboard",
+    "filter_kilter": "🟠 Kilter",
+    "filter_tension": "🔵 Tension",
+    "filter_woody": "🟤 Woody",
+    "filter_kids": "👶 Kinderbereich",
+    "filter_speed": "⚡ Speedwand",
+    "tab_info": "📋 Info",
+    "tab_update": "✏️ Korrektur",
+    "transport_heading": "Öffentlicher Nahverkehr",
+    "transport_none": "Kein öffentlicher Nahverkehr verzeichnet",
+    "transport_loading": "Haltestellen werden geladen…",
+    "transport_none_nearby": "Keine Haltestellen im Umkreis von 600m.",
+    "transport_error": "Haltestellen konnten nicht geladen werden.",
+    "price_prefix": "Tageskarte: ",
+    "price_unknown": "Preis nicht angegeben",
+    "amenity_none": "Keine Ausstattungsdaten verfügbar",
+    "count_suffix": "Hallen",
+    "loading_msg": "Daten werden geladen…",
+    "update_heading": "Korrektur vorschlagen für ",
+    "update_name": "Namenskorrektur",
+    "update_address": "Adresskorrektur",
+    "update_website": "Website- / Kontaktaktualisierung",
+    "update_price": "Preiskorrektur",
+    "update_closed": "⚠️ Diese Halle als dauerhaft geschlossen melden",
+    "update_notes": "Sonstige Anmerkungen",
+    "update_submit": "Absenden",
+    "update_disclaimer": "Korrekturen werden vom ECN-Team geprüft, bevor Änderungen übernommen werden. Vielen Dank für Ihre Mithilfe.",
+    "update_success": "Korrektur erhalten — vielen Dank! Das ECN-Team wird sie in Kürze prüfen.",
+    "update_error": "Es ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
+    "update_empty": "Bitte füllen Sie mindestens ein Feld aus.",
+    "addgym_title": "➕ Halle hinzufügen",
+    "addgym_subtitle": "Neue Kletteranlage zur Prüfung durch das ECN-Team einreichen",
+    "addgym_details": "Hallendetails",
+    "addgym_name": "Name der Halle *",
+    "addgym_address": "Vollständige Adresse *",
+    "addgym_website": "Website",
+    "addgym_phone": "Telefon",
+    "addgym_price": "Eintrittspreis",
+    "addgym_type": "Typ",
+    "addgym_facilities": "Ausstattung",
+    "addgym_additional": "Zusätzliche Informationen",
+    "addgym_notes": "Anmerkungen",
+    "addgym_submitter": "Ihr Name / Kontakt (optional)",
+    "addgym_submit": "Zur Prüfung einreichen",
+    "add_another": "+ Weitere Halle hinzufügen",
+    "addgym_disclaimer": "Alle Einreichungen werden vom ECN-Team geprüft, bevor sie auf der Karte erscheinen. Mit * markierte Felder sind Pflichtfelder.",
+    "addgym_success": "✓ Vielen Dank! Ihre Einreichung wurde erhalten und wird vom ECN-Team geprüft.",
+    "addgym_error": "Es ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut oder schreiben Sie an callum@euroclimbing.news",
+    "addgym_empty": "Bitte geben Sie mindestens den Namen und die Adresse der Halle an.",
+    "chain_show": "Alle ",
+    "chain_clear": "✕ Kettenansicht schließen",
+    "chain_suffix_s": " Standort anzeigen",
+    "chain_suffix_p": " Standorte anzeigen",
+    "transport_stops": " Haltestellen im Umkreis von 600m",
+    "transport_rail": " Bahn",
+    "transport_tram": " Tram",
+    "transport_bus": " Bus"
+  },
+  "it": {
+    "title": "ECN <span>Mappa Palestre</span>",
+    "region": "UK ed Europa",
+    "search_placeholder": "Cerca palestra…",
+    "btn_guide": "? Guida",
+    "guide_title": "Guida alla Mappa ECN",
+    "btn_add_gym": "+ Aggiungi",
+    "filter_all": "Tutte",
+    "filter_bouldering": "🪨 Boulder",
+    "filter_ropes": "🧗 Corde",
+    "filter_autobelay": "⚙️ Autobelay",
+    "filter_cafe": "☕ Caffè",
+    "filter_moonboard": "🌙 Moonboard",
+    "filter_kilter": "🟠 Kilter",
+    "filter_tension": "🔵 Tension",
+    "filter_woody": "🟤 Woody",
+    "filter_kids": "👶 Area bambini",
+    "filter_speed": "⚡ Speed Wall",
+    "tab_info": "📋 Info",
+    "tab_update": "✏️ Correggi",
+    "transport_heading": "Trasporto pubblico nelle vicinanze",
+    "transport_none": "Nessun trasporto pubblico indicato",
+    "transport_loading": "Caricamento fermate…",
+    "transport_none_nearby": "Nessuna fermata entro 600m.",
+    "transport_error": "Impossibile caricare le fermate.",
+    "price_prefix": "Ingresso: ",
+    "price_unknown": "Prezzo non indicato",
+    "amenity_none": "Nessun dato sulle attrezzature disponibile",
+    "count_suffix": "palestre",
+    "loading_msg": "Caricamento dati…",
+    "update_heading": "Suggerisci una correzione per ",
+    "update_name": "Correzione nome",
+    "update_address": "Correzione indirizzo",
+    "update_website": "Aggiornamento sito web / contatti",
+    "update_price": "Aggiornamento prezzo",
+    "update_closed": "⚠️ Segnala questa palestra come chiusa definitivamente",
+    "update_notes": "Altre note",
+    "update_submit": "Invia",
+    "update_disclaimer": "Gli aggiornamenti vengono verificati dal team ECN prima di essere applicati. Grazie per contribuire all'accuratezza della mappa.",
+    "update_success": "Aggiornamento ricevuto — grazie! Il team ECN lo esaminerà a breve.",
+    "update_error": "Si è verificato un errore. Riprova.",
+    "update_empty": "Compila almeno un campo prima di inviare.",
+    "addgym_title": "➕ Aggiungi palestra",
+    "addgym_subtitle": "Invia una nuova struttura di arrampicata per la revisione del team ECN",
+    "addgym_details": "Dettagli palestra",
+    "addgym_name": "Nome palestra *",
+    "addgym_address": "Indirizzo completo *",
+    "addgym_website": "Sito web",
+    "addgym_phone": "Telefono",
+    "addgym_price": "Prezzo ingresso",
+    "addgym_type": "Tipo",
+    "addgym_facilities": "Attrezzature",
+    "addgym_additional": "Informazioni aggiuntive",
+    "addgym_notes": "Note",
+    "addgym_submitter": "Nome / contatto (opzionale)",
+    "addgym_submit": "Invia per revisione",
+    "add_another": "+ Aggiungi un\'altra palestra",
+    "addgym_disclaimer": "Tutte le segnalazioni vengono verificate dal team ECN prima della pubblicazione. I campi contrassegnati con * sono obbligatori.",
+    "addgym_success": "✓ Grazie! La tua segnalazione è stata ricevuta e verrà esaminata dal team ECN.",
+    "addgym_error": "Si è verificato un errore. Riprova o scrivi a callum@euroclimbing.news",
+    "addgym_empty": "Indica almeno il nome e l'indirizzo della palestra.",
+    "chain_show": "Mostra tutti i ",
+    "chain_clear": "✕ Chiudi vista catena",
+    "chain_suffix_s": " sito",
+    "chain_suffix_p": " siti",
+    "transport_stops": " fermate entro 600m",
+    "transport_rail": " treno",
+    "transport_tram": " tram",
+    "transport_bus": " bus"
+  },
+  "no": {
+    "title": "ECN <span>Klatrehall-kart</span>",
+    "region": "Storbritannia og Europa",
+    "search_placeholder": "Søk etter hall…",
+    "btn_guide": "? Veiledning",
+    "guide_title": "ECN Kartguide",
+    "btn_add_gym": "+ Legg til",
+    "filter_all": "Alle",
+    "filter_bouldering": "🪨 Buldring",
+    "filter_ropes": "🧗 Tau",
+    "filter_autobelay": "⚙️ Autobelay",
+    "filter_cafe": "☕ Kafé",
+    "filter_moonboard": "🌙 Moonboard",
+    "filter_kilter": "🟠 Kilter",
+    "filter_tension": "🔵 Tension",
+    "filter_woody": "🟤 Woody",
+    "filter_kids": "👶 Barnesone",
+    "filter_speed": "⚡ Hastighetsvegg",
+    "tab_info": "📋 Info",
+    "tab_update": "✏️ Korriger",
+    "transport_heading": "Kollektivtransport i nærheten",
+    "transport_none": "Ingen kollektivtransport registrert",
+    "transport_loading": "Laster holdeplasser…",
+    "transport_none_nearby": "Ingen holdeplasser innen 600m.",
+    "transport_error": "Kunne ikke laste holdeplasser.",
+    "price_prefix": "Dagskort: ",
+    "price_unknown": "Pris ikke oppgitt",
+    "amenity_none": "Ingen fasilitetsdata tilgjengelig",
+    "count_suffix": "haller",
+    "loading_msg": "Laster data…",
+    "update_heading": "Foreslå en rettelse for ",
+    "update_name": "Navnekorreksjon",
+    "update_address": "Adressekorreksjon",
+    "update_website": "Nettside- / kontaktoppdatering",
+    "update_price": "Prisoppdatering",
+    "update_closed": "⚠️ Rapporter denne hallen som permanent stengt",
+    "update_notes": "Andre merknader",
+    "update_submit": "Send inn",
+    "update_disclaimer": "Oppdateringer gjennomgås av ECN-teamet før endringer gjøres. Takk for at du bidrar til kartets nøyaktighet.",
+    "update_success": "Oppdatering mottatt — takk! ECN-teamet vil gjennomgå den snart.",
+    "update_error": "Noe gikk galt. Vennligst prøv igjen.",
+    "update_empty": "Fyll inn minst ett felt før du sender.",
+    "addgym_title": "➕ Legg til hall",
+    "addgym_subtitle": "Send inn et nytt klatreanlegg for gjennomgang av ECN-teamet",
+    "addgym_details": "Halldetaljer",
+    "addgym_name": "Hallnavn *",
+    "addgym_address": "Fullstendig adresse *",
+    "addgym_website": "Nettside",
+    "addgym_phone": "Telefon",
+    "addgym_price": "Inngangspris",
+    "addgym_type": "Type",
+    "addgym_facilities": "Fasiliteter",
+    "addgym_additional": "Tilleggsinformasjon",
+    "addgym_notes": "Merknader",
+    "addgym_submitter": "Ditt navn / kontakt (valgfritt)",
+    "addgym_submit": "Send til gjennomgang",
+    "add_another": "+ Legg til en annen hall",
+    "addgym_disclaimer": "Alle innsendinger gjennomgås av ECN-teamet før de vises på kartet. Felt merket med * er obligatoriske.",
+    "addgym_success": "✓ Takk! Innsendingen din er mottatt og vil bli gjennomgått av ECN-teamet.",
+    "addgym_error": "Noe gikk galt. Prøv igjen eller send e-post til callum@euroclimbing.news",
+    "addgym_empty": "Oppgi minst navn og adresse for hallen.",
+    "chain_show": "Vis alle ",
+    "chain_clear": "✕ Lukk kjedevisning",
+    "chain_suffix_s": " lokasjon",
+    "chain_suffix_p": " lokasjoner",
+    "transport_stops": " holdeplasser innen 600m",
+    "transport_rail": " jernbane",
+    "transport_tram": " trikk",
+    "transport_bus": " buss"
+  },
+  "es": {
+    "title": "ECN <span>Mapa de Rocódromos</span>",
+    "region": "Reino Unido y Europa",
+    "search_placeholder": "Buscar rocódromo…",
+    "btn_guide": "? Guía",
+    "guide_title": "Guía del Mapa ECN",
+    "btn_add_gym": "+ Añadir",
+    "filter_all": "Todos",
+    "filter_bouldering": "🪨 Búlder",
+    "filter_ropes": "🧗 Cuerda",
+    "filter_autobelay": "⚙️ Autobelay",
+    "filter_cafe": "☕ Cafetería",
+    "filter_moonboard": "🌙 Moonboard",
+    "filter_kilter": "🟠 Kilter",
+    "filter_tension": "🔵 Tension",
+    "filter_woody": "🟤 Woody",
+    "filter_kids": "👶 Zona infantil",
+    "filter_speed": "⚡ Velocidad",
+    "tab_info": "📋 Info",
+    "tab_update": "✏️ Corregir",
+    "transport_heading": "Transporte público cercano",
+    "transport_none": "Sin transporte público indicado",
+    "transport_loading": "Cargando paradas…",
+    "transport_none_nearby": "Sin paradas en un radio de 600m.",
+    "transport_error": "No se pudieron cargar las paradas.",
+    "price_prefix": "Entrada: ",
+    "price_unknown": "Precio no indicado",
+    "amenity_none": "Sin datos de equipamiento disponibles",
+    "count_suffix": "rocódromos",
+    "loading_msg": "Cargando datos…",
+    "update_heading": "Sugerir una corrección para ",
+    "update_name": "Corrección de nombre",
+    "update_address": "Corrección de dirección",
+    "update_website": "Actualización de sitio web / contacto",
+    "update_price": "Actualización de precio",
+    "update_closed": "⚠️ Reportar este rocódromo como cerrado permanentemente",
+    "update_notes": "Otras notas",
+    "update_submit": "Enviar",
+    "update_disclaimer": "Todas las actualizaciones son revisadas por el equipo ECN antes de aplicarse. Gracias por contribuir a la precisión del mapa.",
+    "update_success": "Actualización recibida — ¡gracias! El equipo ECN la revisará pronto.",
+    "update_error": "Algo salió mal. Por favor, inténtalo de nuevo.",
+    "update_empty": "Rellena al menos un campo antes de enviar.",
+    "addgym_title": "➕ Añadir rocódromo",
+    "addgym_subtitle": "Enviar una nueva instalación de escalada para revisión del equipo ECN",
+    "addgym_details": "Detalles del rocódromo",
+    "addgym_name": "Nombre *",
+    "addgym_address": "Dirección completa *",
+    "addgym_website": "Sitio web",
+    "addgym_phone": "Teléfono",
+    "addgym_price": "Precio de entrada",
+    "addgym_type": "Tipo",
+    "addgym_facilities": "Instalaciones",
+    "addgym_additional": "Información adicional",
+    "addgym_notes": "Notas",
+    "addgym_submitter": "Tu nombre / contacto (opcional)",
+    "addgym_submit": "Enviar para revisión",
+    "add_another": "+ Añadir otro rocódromo",
+    "addgym_disclaimer": "Todas las propuestas son revisadas por el equipo ECN antes de publicarse. Los campos marcados con * son obligatorios.",
+    "addgym_success": "✓ ¡Gracias! Tu propuesta ha sido recibida y será revisada por el equipo ECN.",
+    "addgym_error": "Algo salió mal. Inténtalo de nuevo o escribe a callum@euroclimbing.news",
+    "addgym_empty": "Indica al menos el nombre y la dirección del rocódromo.",
+    "chain_show": "Ver los ",
+    "chain_clear": "✕ Cerrar vista cadena",
+    "chain_suffix_s": " local",
+    "chain_suffix_p": " locales",
+    "transport_stops": " paradas en un radio de 600m",
+    "transport_rail": " tren",
+    "transport_tram": " tranvía",
+    "transport_bus": " bus"
+  }
+};
+
+var GUIDE_TRANSLATIONS = {
+  en: "\n      <div class=\"guide-section\">\n        <h3>🗺️ Getting Started</h3>\n        <p>The ECN Gym Map is a free resource showing climbing facilities across the UK, Ireland and Europe. Over 340 mapped sites are shown as orange dots. Pan and zoom using your mouse or trackpad — on mobile, use touch gestures.</p>\n        <div class=\"guide-tip\">💡 Click any orange marker to open that gym's profile. Search by name using the search bar in the header.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>🏟️ Gym Profiles</h3>\n        <p>Click any marker to open the gym's profile panel. Each listing shows the gym's name, address, entry price, website, phone number, and confirmed amenities — bouldering, ropes, café, training boards, kids zone and more.</p>\n        <p>The <strong>Public Transport Nearby</strong> section shows the number of stops within 600m, pulled live from OpenStreetMap.</p>\n        <div class=\"guide-tip\">💡 If a gym belongs to a chain, a badge appears in the panel — click <strong>Show all locations</strong> to highlight every site in that group on the map.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>🔎 Search & Filter</h3>\n        <p>Use the search bar in the header to find a gym by name. Results appear as you type — click any result to fly to that gym and open its profile.</p>\n        <p>The filter bar below the header lets you narrow the map to gyms with specific features: bouldering, ropes, autobelay, café, Moonboard, Kilter, Tension, Woody, kids zone, or speed wall.</p>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>➕ Add a Missing Gym</h3>\n        <p>Know of a facility that isn't on the map? Click <strong>+ Add Gym</strong> in the header to submit it. Provide as much detail as you can — name, address, website, type and amenities. All submissions are reviewed by the ECN team before appearing on the map.</p>\n        <div class=\"guide-tip\">💡 The more detail you provide, the faster we can verify and add the listing.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>✏️ Suggest a Correction</h3>\n        <p>If a gym's information is outdated or incorrect, open the profile and click the <strong>Update Info</strong> tab. You can submit corrections for the name, address, website, entry price, or report a permanent closure. All submissions are reviewed before any changes are made.</p>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>📊 ECN Pro</h3>\n        <p>This is the free version of the ECN map. <strong>ECN Pro</strong> adds population density and demographic overlays, adjustable walk/cycle/drive catchment analysis with population counts, competitor gym counts within any catchment zone, and location analysis for any point in Europe.</p>\n        <p>Visit <a href=\"https://euroclimbing.news/pro\" target=\"_blank\" style=\"color:#000099\">euroclimbing.news/pro</a> to find out more.</p>\n      </div>\n",
+  fr: "\n      <div class=\"guide-section\">\n        <h3>🗺️ Premiers pas</h3>\n        <p>La carte ECN est une ressource gratuite montrant les salles d'escalade au Royaume-Uni, en Irlande et en Europe. Plus de 340 sites sont représentés par des points orange. Naviguez et zoomez avec votre souris ou trackpad — sur mobile, utilisez les gestes tactiles.</p>\n        <div class=\"guide-tip\">💡 Cliquez sur un marqueur orange pour ouvrir le profil de la salle. Recherchez par nom via la barre de recherche.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>🏟️ Profils des salles</h3>\n        <p>Cliquez sur un marqueur pour ouvrir le panneau de profil. Chaque fiche indique le nom, l'adresse, le tarif d'entrée, le site web, le numéro de téléphone et les équipements confirmés — bloc, cordes, café, panneaux d'entraînement, espace enfants et plus.</p>\n        <p>La section <strong>Transports à proximité</strong> indique le nombre d'arrêts dans un rayon de 600m, récupérés en temps réel depuis OpenStreetMap.</p>\n        <div class=\"guide-tip\">💡 Si une salle fait partie d'une chaîne, un badge apparaît — cliquez sur <strong>Voir tous les sites</strong> pour les mettre en évidence sur la carte.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>🔎 Recherche et filtres</h3>\n        <p>Utilisez la barre de recherche pour trouver une salle par nom. Les résultats apparaissent au fur et à mesure — cliquez sur un résultat pour y accéder et ouvrir son profil.</p>\n        <p>La barre de filtres permet de n'afficher que les salles disposant d'équipements spécifiques : bloc, cordes, moulinette auto, café, Moonboard, Kilter, Tension, Woody, espace enfants ou mur de vitesse.</p>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>➕ Ajouter une salle manquante</h3>\n        <p>Vous connaissez une salle qui n'est pas sur la carte ? Cliquez sur <strong>+ Ajouter</strong> pour la soumettre. Fournissez autant de détails que possible. Toutes les soumissions sont vérifiées par l'équipe ECN.</p>\n        <div class=\"guide-tip\">💡 Plus vous fournissez de détails, plus vite nous pourrons vérifier et ajouter la fiche.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>✏️ Suggérer une correction</h3>\n        <p>Si les informations d'une salle sont obsolètes ou incorrectes, ouvrez le profil et cliquez sur l'onglet <strong>Corriger</strong>. Vous pouvez soumettre des corrections pour le nom, l'adresse, le site web, le tarif ou signaler une fermeture définitive. Toutes les soumissions sont vérifiées avant publication.</p>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>📊 ECN Pro</h3>\n        <p>Ceci est la version gratuite de la carte ECN. <strong>ECN Pro</strong> ajoute des couches de densité de population et démographiques, une analyse de zone de chalandise ajustable, le comptage des salles concurrentes et l'analyse de localisation pour n'importe quel point en Europe.</p>\n        <p>Visitez <a href=\"https://euroclimbing.news/pro\" target=\"_blank\" style=\"color:#000099\">euroclimbing.news/pro</a> pour en savoir plus.</p>\n      </div>\n",
+  de: "\n      <div class=\"guide-section\">\n        <h3>🗺️ Erste Schritte</h3>\n        <p>Die ECN-Karte ist eine kostenlose Ressource, die Kletteranlagen in Großbritannien, Irland und Europa zeigt. Über 340 Standorte werden als orangefarbene Punkte dargestellt. Navigieren Sie mit Maus oder Trackpad — auf Mobilgeräten mit Touch-Gesten.</p>\n        <div class=\"guide-tip\">💡 Klicken Sie auf einen orangefarbenen Marker, um das Hallenprofil zu öffnen. Suchen Sie über die Suchleiste nach Namen.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>🏟️ Hallenprofile</h3>\n        <p>Klicken Sie auf einen Marker, um das Profil zu öffnen. Jeder Eintrag zeigt Name, Adresse, Eintrittspreis, Website, Telefonnummer und bestätigte Ausstattung — Bouldern, Seilklettern, Café, Trainingsboards, Kinderbereich und mehr.</p>\n        <p>Der Abschnitt <strong>Öffentlicher Nahverkehr</strong> zeigt die Anzahl der Haltestellen im Umkreis von 600m, live von OpenStreetMap abgerufen.</p>\n        <div class=\"guide-tip\">💡 Gehört eine Halle zu einer Kette, erscheint ein Badge — klicken Sie auf <strong>Alle Standorte anzeigen</strong>, um sie auf der Karte hervorzuheben.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>🔎 Suche und Filter</h3>\n        <p>Verwenden Sie die Suchleiste, um eine Halle nach Namen zu finden. Ergebnisse erscheinen während der Eingabe — klicken Sie auf ein Ergebnis, um dorthin zu fliegen und das Profil zu öffnen.</p>\n        <p>Die Filterleiste ermöglicht die Eingrenzung auf Hallen mit bestimmter Ausstattung: Bouldern, Seilklettern, Autobelay, Café, Moonboard, Kilter, Tension, Woody, Kinderbereich oder Speedwand.</p>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>➕ Fehlende Halle hinzufügen</h3>\n        <p>Kennen Sie eine Anlage, die nicht auf der Karte ist? Klicken Sie auf <strong>+ Hinzufügen</strong>, um sie einzureichen. Geben Sie so viele Details wie möglich an. Alle Einreichungen werden vom ECN-Team geprüft.</p>\n        <div class=\"guide-tip\">💡 Je mehr Details Sie angeben, desto schneller können wir den Eintrag verifizieren.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>✏️ Korrektur vorschlagen</h3>\n        <p>Wenn die Informationen einer Halle veraltet oder falsch sind, öffnen Sie das Profil und klicken Sie auf den Reiter <strong>Korrektur</strong>. Sie können Korrekturen für Name, Adresse, Website, Preis einreichen oder eine dauerhafte Schließung melden. Alle Eingaben werden vor Übernahme geprüft.</p>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>📊 ECN Pro</h3>\n        <p>Dies ist die kostenlose Version der ECN-Karte. <strong>ECN Pro</strong> bietet zusätzlich Bevölkerungsdichte- und Demografie-Overlays, anpassbare Einzugsgebietsanalysen, Konkurrenz-Hallenzählung und Standortanalyse für jeden Punkt in Europa.</p>\n        <p>Besuchen Sie <a href=\"https://euroclimbing.news/pro\" target=\"_blank\" style=\"color:#000099\">euroclimbing.news/pro</a> für weitere Informationen.</p>\n      </div>\n",
+  it: "\n      <div class=\"guide-section\">\n        <h3>🗺️ Per iniziare</h3>\n        <p>La mappa ECN è una risorsa gratuita che mostra le palestre di arrampicata nel Regno Unito, in Irlanda e in Europa. Oltre 340 siti sono mostrati come punti arancioni. Naviga e zooma con il mouse o il trackpad — su mobile, usa i gesti touch.</p>\n        <div class=\"guide-tip\">💡 Clicca su un marcatore arancione per aprire il profilo della palestra. Cerca per nome usando la barra di ricerca.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>🏟️ Profili delle palestre</h3>\n        <p>Clicca su un marcatore per aprire il pannello del profilo. Ogni scheda mostra nome, indirizzo, prezzo d'ingresso, sito web, numero di telefono e attrezzature confermate — boulder, corde, caffè, pannelli di allenamento, area bambini e altro.</p>\n        <p>La sezione <strong>Trasporto pubblico nelle vicinanze</strong> mostra il numero di fermate entro 600m, recuperate in tempo reale da OpenStreetMap.</p>\n        <div class=\"guide-tip\">💡 Se una palestra fa parte di una catena, appare un badge — clicca <strong>Mostra tutti i siti</strong> per evidenziarli sulla mappa.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>🔎 Ricerca e filtri</h3>\n        <p>Usa la barra di ricerca per trovare una palestra per nome. I risultati appaiono durante la digitazione — clicca su un risultato per raggiungerlo e aprire il profilo.</p>\n        <p>La barra dei filtri permette di visualizzare solo le palestre con attrezzature specifiche: boulder, corde, autobelay, caffè, Moonboard, Kilter, Tension, Woody, area bambini o speed wall.</p>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>➕ Aggiungi una palestra mancante</h3>\n        <p>Conosci una struttura che non è sulla mappa? Clicca su <strong>+ Aggiungi</strong> per segnalarla. Fornisci quanti più dettagli possibile. Tutte le segnalazioni vengono verificate dal team ECN.</p>\n        <div class=\"guide-tip\">💡 Più dettagli fornisci, più velocemente potremo verificare e aggiungere la scheda.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>✏️ Suggerisci una correzione</h3>\n        <p>Se le informazioni di una palestra sono obsolete o errate, apri il profilo e clicca sulla scheda <strong>Correggi</strong>. Puoi inviare correzioni per nome, indirizzo, sito web, prezzo o segnalare una chiusura definitiva. Tutte le correzioni vengono verificate prima della pubblicazione.</p>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>📊 ECN Pro</h3>\n        <p>Questa è la versione gratuita della mappa ECN. <strong>ECN Pro</strong> aggiunge overlay di densità di popolazione e demografici, analisi di bacino d'utenza regolabile, conteggio palestre concorrenti e analisi di localizzazione per qualsiasi punto in Europa.</p>\n        <p>Visita <a href=\"https://euroclimbing.news/pro\" target=\"_blank\" style=\"color:#000099\">euroclimbing.news/pro</a> per saperne di più.</p>\n      </div>\n",
+  no: "\n      <div class=\"guide-section\">\n        <h3>🗺️ Kom i gang</h3>\n        <p>ECN-kartet er en gratis ressurs som viser klatreanlegg i Storbritannia, Irland og Europa. Over 340 steder vises som oransje prikker. Naviger og zoom med musen eller styreplaten — på mobil bruker du berøringsbevegelser.</p>\n        <div class=\"guide-tip\">💡 Klikk på en oransje markør for å åpne hallens profil. Søk etter navn via søkefeltet.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>🏟️ Hallprofiler</h3>\n        <p>Klikk på en markør for å åpne profilpanelet. Hver oppføring viser navn, adresse, inngangspris, nettside, telefonnummer og bekreftede fasiliteter — buldring, tau, kafé, treningsbrett, barnesone og mer.</p>\n        <p>Avsnittet <strong>Kollektivtransport i nærheten</strong> viser antall holdeplasser innen 600m, hentet direkte fra OpenStreetMap.</p>\n        <div class=\"guide-tip\">💡 Hvis en hall tilhører en kjede, vises et merke — klikk <strong>Vis alle lokasjoner</strong> for å markere dem på kartet.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>🔎 Søk og filter</h3>\n        <p>Bruk søkefeltet for å finne en hall etter navn. Resultater vises mens du skriver — klikk på et resultat for å fly dit og åpne profilen.</p>\n        <p>Filterlinjen lar deg begrense kartet til haller med spesifikke fasiliteter: buldring, tau, autobelay, kafé, Moonboard, Kilter, Tension, Woody, barnesone eller hastighetsvegg.</p>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>➕ Legg til en manglende hall</h3>\n        <p>Kjenner du til et anlegg som ikke er på kartet? Klikk <strong>+ Legg til</strong> for å sende det inn. Oppgi så mange detaljer som mulig. Alle innsendinger gjennomgås av ECN-teamet.</p>\n        <div class=\"guide-tip\">💡 Jo flere detaljer du gir, desto raskere kan vi verifisere og legge til oppføringen.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>✏️ Foreslå en rettelse</h3>\n        <p>Hvis informasjonen om en hall er utdatert eller feil, åpne profilen og klikk på fanen <strong>Korriger</strong>. Du kan sende inn rettelser for navn, adresse, nettside, pris eller rapportere en permanent stenging. Alle rettelser gjennomgås før endringer gjøres.</p>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>📊 ECN Pro</h3>\n        <p>Dette er gratisversjonen av ECN-kartet. <strong>ECN Pro</strong> legger til befolkningstetthet og demografiske lag, justerbar nedslagsanalyse, telling av konkurrerende haller og stedsanalyse for ethvert punkt i Europa.</p>\n        <p>Besøk <a href=\"https://euroclimbing.news/pro\" target=\"_blank\" style=\"color:#000099\">euroclimbing.news/pro</a> for mer informasjon.</p>\n      </div>\n",
+  es: "\n      <div class=\"guide-section\">\n        <h3>🗺️ Primeros pasos</h3>\n        <p>El mapa ECN es un recurso gratuito que muestra instalaciones de escalada en el Reino Unido, Irlanda y Europa. Más de 340 sitios se muestran como puntos naranjas. Navega y amplía con el ratón o trackpad — en móvil, usa gestos táctiles.</p>\n        <div class=\"guide-tip\">💡 Haz clic en un marcador naranja para abrir el perfil del rocódromo. Busca por nombre usando la barra de búsqueda.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>🏟️ Perfiles de rocódromos</h3>\n        <p>Haz clic en un marcador para abrir el panel del perfil. Cada ficha muestra el nombre, dirección, precio de entrada, sitio web, teléfono y equipamiento confirmado — búlder, cuerda, cafetería, paneles de entrenamiento, zona infantil y más.</p>\n        <p>La sección <strong>Transporte público cercano</strong> muestra el número de paradas en un radio de 600m, obtenidas en tiempo real de OpenStreetMap.</p>\n        <div class=\"guide-tip\">💡 Si un rocódromo pertenece a una cadena, aparece una insignia — haz clic en <strong>Ver todos los locales</strong> para resaltarlos en el mapa.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>🔎 Búsqueda y filtros</h3>\n        <p>Usa la barra de búsqueda para encontrar un rocódromo por nombre. Los resultados aparecen mientras escribes — haz clic en uno para ir allí y abrir su perfil.</p>\n        <p>La barra de filtros permite mostrar solo rocódromos con equipamiento específico: búlder, cuerda, autobelay, cafetería, Moonboard, Kilter, Tension, Woody, zona infantil o muro de velocidad.</p>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>➕ Añadir un rocódromo</h3>\n        <p>¿Conoces una instalación que no aparece en el mapa? Haz clic en <strong>+ Añadir</strong> para enviarla. Proporciona tantos detalles como sea posible. Todas las propuestas son revisadas por el equipo ECN.</p>\n        <div class=\"guide-tip\">💡 Cuantos más detalles proporciones, más rápido podremos verificar y añadir la ficha.</div>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>✏️ Sugerir una corrección</h3>\n        <p>Si la información de un rocódromo está desactualizada o es incorrecta, abre el perfil y haz clic en la pestaña <strong>Corregir</strong>. Puedes enviar correcciones de nombre, dirección, sitio web, precio o reportar un cierre permanente. Todas las correcciones son revisadas antes de aplicarse.</p>\n      </div>\n\n      <div class=\"guide-section\">\n        <h3>📊 ECN Pro</h3>\n        <p>Esta es la versión gratuita del mapa ECN. <strong>ECN Pro</strong> añade capas de densidad de población y demográficas, análisis de zona de influencia ajustable, conteo de rocódromos competidores y análisis de ubicación para cualquier punto de Europa.</p>\n        <p>Visita <a href=\"https://euroclimbing.news/pro\" target=\"_blank\" style=\"color:#000099\">euroclimbing.news/pro</a> para más información.</p>\n      </div>\n"
+};
+
+function toggleLangMenu(e) {
+  e.stopPropagation();
+  document.getElementById('lang-dropdown').classList.toggle('open');
+}
+document.addEventListener('click', function() {
+  var dd = document.getElementById('lang-dropdown');
+  if (dd) dd.classList.remove('open');
+});
+
+function t(key) {
+  var lang = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
+  return lang[key] || TRANSLATIONS.en[key] || key;
+}
+
+function setLang(code) {
+  currentLang = code;
+  document.getElementById('lang-dropdown').classList.remove('open');
+
+  // Update button label
+  var labels = { en: '🌐 EN', fr: '🌐 FR', de: '🌐 DE', it: '🌐 IT', no: '🌐 NO', es: '🌐 ES' };
+  document.getElementById('lang-btn').textContent = labels[code] || labels.en;
+
+  // Mark active option
+  document.querySelectorAll('.lang-opt').forEach(function(el) {
+    el.classList.toggle('active', el.textContent.toLowerCase().indexOf(code) >= 0 ||
+      (code === 'en' && el.textContent.indexOf('English') >= 0) ||
+      (code === 'fr' && el.textContent.indexOf('Fran') >= 0) ||
+      (code === 'de' && el.textContent.indexOf('Deutsch') >= 0) ||
+      (code === 'it' && el.textContent.indexOf('Italiano') >= 0) ||
+      (code === 'no' && el.textContent.indexOf('Norsk') >= 0) ||
+      (code === 'es' && el.textContent.indexOf('Espa') >= 0)
+    );
+  });
+
+  // Update all data-i18n elements
+  document.querySelectorAll('[data-i18n]').forEach(function(el) {
+    var key = el.getAttribute('data-i18n');
+    var val = t(key);
+    if (val) el.textContent = val;
+  });
+
+  // Update header title (has HTML inside)
+  var titleEl = document.getElementById('header-title');
+  if (titleEl) titleEl.innerHTML = t('title');
+
+  // Update search placeholder
+  var searchEl = document.getElementById('gym-search');
+  if (searchEl) searchEl.placeholder = t('search_placeholder');
+
+  // Update guide button
+  var guideBtn = document.getElementById('guide-btn');
+  if (guideBtn) guideBtn.textContent = t('btn_guide');
+
+  // Update add gym button
+  var addBtn = document.getElementById('add-gym-btn');
+  if (addBtn) addBtn.textContent = t('btn_add_gym');
+
+  // Update count badge suffix
+  updateCountBadge();
+
+  // Update guide body
+  var gb = document.getElementById('guide-body');
+  if (gb) {
+    var guideHtml = GUIDE_TRANSLATIONS[code];
+    if (guideHtml) {
+      gb.innerHTML = guideHtml;
+    } else if (window._guideEN) {
+      gb.innerHTML = window._guideEN;
+    }
+  }
+
+  // Re-render panel if open
+  if (selectedGym) {
+    showPanel(selectedGym.properties, selectedGymIdx);
+  }
+
+  // Persist
+  try { localStorage.setItem('ecn_lang', code); } catch(e) {}
+}
+
+function updateCountBadge() {
+  var countEl = document.getElementById('visible-count');
+  var badge = document.getElementById('count-badge');
+  if (countEl && badge) {
+    var num = countEl.textContent;
+    badge.innerHTML = '<span id="visible-count">' + num + '</span> ' + t('count_suffix');
+  }
+}
+
+// Store English guide on load and restore saved language
+document.addEventListener('DOMContentLoaded', function() {
+  var gb = document.getElementById('guide-body');
+  if (gb) window._guideEN = gb.innerHTML;
+  try {
+    var saved = localStorage.getItem('ecn_lang');
+    if (saved && TRANSLATIONS[saved]) setLang(saved);
+  } catch(e) {}
+});
+
+
+// ─── RESET ADD GYM FORM ────────────────────────────────────────
+function resetAddGymForm() {
+  document.getElementById('ag-name').value = '';
+  document.getElementById('ag-address').value = '';
+  document.getElementById('ag-website').value = '';
+  document.getElementById('ag-phone').value = '';
+  document.getElementById('ag-price').value = '';
+  document.getElementById('ag-type').value = '';
+  document.getElementById('ag-notes').value = '';
+  document.getElementById('ag-submitter').value = '';
+  document.querySelectorAll('#ag-facilities input').forEach(function(cb) {
+    cb.checked = false;
+    cb.closest('.add-gym-check').classList.remove('checked');
+  });
+  var status = document.getElementById('add-gym-status');
+  status.className = '';
+  status.textContent = '';
+  var btn = document.getElementById('add-gym-submit');
+  btn.disabled = false;
+  btn.textContent = t('addgym_submit');
+  btn.style.display = '';
+  document.getElementById('add-another-btn').style.display = 'none';
+  document.getElementById('add-gym-form-body').scrollTop = 0;
+}
+
+loadGyms();
+
+</script>
+</body>
+</html>

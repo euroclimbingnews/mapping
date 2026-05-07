@@ -10,23 +10,36 @@ var REPORT_PATHS = {
   '/reports/market-2025': 'ECN 2025 Market Report.pdf',
 };
 
+// Allowed referrers for free map data access
+var ALLOWED_REFERRERS = [
+  'map.euroclimbing.news',
+  'www.euroclimbing.news',
+  'euroclimbing.news',
+  'euroclimbingnews.github.io',
+  'localhost',
+  '127.0.0.1',
+];
+
+// Cache duration: 5 minutes (in seconds)
+var CACHE_TTL = 300;
+
 export default {
   async fetch(request, env) {
     var url = new URL(request.url);
     var path = url.pathname;
 
-    // ─── Public demo map — no auth required ───
-    if (path === '/demo') {
-      var demoHtml = await env.ECN_PRO_CONTENT.get('demo-map');
-      if (!demoHtml) return new Response('Not found', { status: 404 });
-      return new Response(demoHtml, {
-        headers: { 'Content-Type': 'text/html;charset=UTF-8' },
-      });
+    // ─── Data API: gym data (free + pro) ───
+    if (path === '/api/gyms') {
+      return handleGymsRequest(request, env);
+    }
+
+    // ─── Data API: roundup data (pro only) ───
+    if (path === '/api/roundup') {
+      return handleRoundupRequest(request, env);
     }
 
     // ─── Protected reports ───
     if (REPORT_PATHS[path]) {
-
       var rToken = url.searchParams.get('token');
 
       if (!rToken) {
@@ -44,7 +57,6 @@ export default {
         });
       }
 
-      // Fetch PDF from R2
       var fileName = REPORT_PATHS[path];
       var object = await env.PRO_REPORTS.get(fileName);
 
@@ -112,6 +124,139 @@ export default {
     return env.ASSETS.fetch(request);
   },
 };
+
+// ─── Data API handlers ───
+
+async function handleGymsRequest(request, env) {
+  // Check referrer — allow requests from our own domains
+  var referrer = request.headers.get('Referer') || '';
+  var origin = request.headers.get('Origin') || '';
+  var source = referrer || origin;
+
+  // Also allow if they have a valid JWT (pro subscribers)
+  var hasValidToken = false;
+  var cookies = request.headers.get('Cookie') || '';
+  var tokenMatch = cookies.match(/ecn_token=([^;]+)/);
+  if (tokenMatch) {
+    var payload = await validateJWT(tokenMatch[1], env.JWT_SECRET);
+    if (payload) hasValidToken = true;
+  }
+
+  if (!hasValidToken) {
+    // Check referrer for free map access
+    var allowed = false;
+    for (var i = 0; i < ALLOWED_REFERRERS.length; i++) {
+      if (source.indexOf(ALLOWED_REFERRERS[i]) >= 0) {
+        allowed = true;
+        break;
+      }
+    }
+    if (!allowed) {
+      return new Response(JSON.stringify({ error: 'Forbidden' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+  }
+
+  // Serve cached data or fetch fresh
+  var data = await getCachedData(env, 'cache:gyms', env.SHEET_CSV_URL);
+  if (!data) {
+    return new Response(JSON.stringify({ error: 'Failed to load gym data' }), {
+      status: 502,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  return new Response(data, {
+    headers: {
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Cache-Control': 'private, max-age=60',
+      'Access-Control-Allow-Origin': '*',
+    },
+  });
+}
+
+async function handleRoundupRequest(request, env) {
+  // Roundup data is Pro-only — require valid JWT
+  var cookies = request.headers.get('Cookie') || '';
+  var tokenMatch = cookies.match(/ecn_token=([^;]+)/);
+  var token = tokenMatch ? tokenMatch[1] : null;
+
+  if (!token) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  var payload = await validateJWT(token, env.JWT_SECRET);
+  if (!payload) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  var data = await getCachedData(env, 'cache:roundup', env.ROUNDUP_CSV_URL);
+  if (!data) {
+    return new Response(JSON.stringify({ error: 'Failed to load roundup data' }), {
+      status: 502,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  return new Response(data, {
+    headers: {
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Cache-Control': 'private, max-age=60',
+    },
+  });
+}
+
+// ─── KV Cache ───
+
+async function getCachedData(env, cacheKey, sourceUrl) {
+  // Try cache first
+  try {
+    var cached = await env.ECN_PRO_CONTENT.getWithMetadata(cacheKey);
+    if (cached && cached.value && cached.metadata) {
+      var age = (Date.now() - cached.metadata.timestamp) / 1000;
+      if (age < CACHE_TTL) {
+        return cached.value;
+      }
+    }
+  } catch (e) {
+    // Cache miss, continue to fetch
+  }
+
+  // Fetch fresh data from Google Sheets
+  try {
+    var resp = await fetch(sourceUrl);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    var data = await resp.text();
+
+    // Store in cache with timestamp
+    try {
+      await env.ECN_PRO_CONTENT.put(cacheKey, data, {
+        metadata: { timestamp: Date.now() },
+      });
+    } catch (e) {
+      // Cache write failed, non-fatal
+    }
+
+    return data;
+  } catch (e) {
+    // If fetch fails, try serving stale cache
+    try {
+      var stale = await env.ECN_PRO_CONTENT.get(cacheKey);
+      if (stale) return stale;
+    } catch (e2) {
+      // Nothing available
+    }
+    return null;
+  }
+}
 
 // ─── JWT Validation ───
 
