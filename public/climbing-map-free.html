@@ -454,14 +454,8 @@
   /* ── DRAG HANDLE ─────────────────────────────────────── */
   #panel-drag-handle {
     display: none;
-    width: 48px; height: 5px; border-radius: 3px;
-    background: var(--sand); margin: 10px auto 4px; flex-shrink: 0;
-    cursor: grab; position: relative;
-  }
-  #panel-drag-handle::before {
-    content: '';
-    position: absolute;
-    top: -14px; left: -20px; right: -20px; bottom: -14px;
+    width: 36px; height: 4px; border-radius: 2px;
+    background: var(--sand); margin: 10px auto 0; flex-shrink: 0;
   }
 
   /* ── GYM MARKERS ────────────────────────────────────── */
@@ -473,7 +467,7 @@
   }
   .gym-marker:hover, .gym-marker.selected { transform: scale(1.5); }
   .gym-marker.selected { background: var(--forest); }
-  /* chain-dim handled via GL paint */
+  .gym-marker.chain-dim { display: none; }
   .gym-marker.chain-highlight {
     background: #000099 !important;
     box-shadow: 0 0 0 3px white, 0 0 0 5px #000099;
@@ -1208,8 +1202,9 @@ function matchesFilter(props, filter) {
 
 function buildMarkers() {
   if (!GYMS) return;
+  console.log('buildMarkers called, features:', GYMS.features.length);
 
-  // Remove previous layers/source if rebuilding after filter change
+  // Remove previous GL layers/source
   ['ecn-gym-clusters','ecn-gym-cluster-count','ecn-gym-points'].forEach(function(id) {
     if (map.getLayer(id)) map.removeLayer(id);
   });
@@ -1223,13 +1218,13 @@ function buildMarkers() {
       return matchesFilter(f.properties, activeFilter);
     })
   };
-  // Store original GYMS index for click identification
   var origFeatures = GYMS.features;
   filtered.features.forEach(function(f) {
     f.properties._origIdx = origFeatures.indexOf(f);
   });
 
   document.getElementById('visible-count').textContent = filtered.features.length;
+  updateCountBadge();
 
   map.addSource('ecn-gyms', {
     type: 'geojson',
@@ -1280,30 +1275,6 @@ function buildMarkers() {
     }
   });
 
-  // Click cluster: zoom in
-  map.on('click', 'ecn-gym-clusters', function(e) {
-    var clusterId = e.features[0].properties.cluster_id;
-    map.getSource('ecn-gyms').getClusterExpansionZoom(clusterId, function(err, zoom) {
-      if (err) return;
-      map.easeTo({ center: e.features[0].geometry.coordinates, zoom: zoom + 0.5 });
-    });
-  });
-
-  // Click individual gym: select it
-  map.on('click', 'ecn-gym-points', function(e) {
-    var props = e.features[0].properties;
-    var origIdx = (props._origIdx !== undefined) ? Number(props._origIdx) : -1;
-    if (origIdx < 0) {
-      var coords = e.features[0].geometry.coordinates;
-      origIdx = GYMS.features.findIndex(function(gf) {
-        return gf.geometry.coordinates[0] === coords[0] && gf.geometry.coordinates[1] === coords[1];
-      });
-    }
-    if (origIdx < 0) return;
-    selectGym(origIdx);
-  });
-
-  // Hover tooltip on individual points
   var tooltip = document.getElementById('gym-tooltip');
   map.on('mousemove', 'ecn-gym-points', function(e) {
     if (!tooltip) return;
@@ -1319,13 +1290,16 @@ function buildMarkers() {
   });
   map.on('mouseenter', 'ecn-gym-clusters', function() { map.getCanvas().style.cursor = 'pointer'; });
   map.on('mouseleave', 'ecn-gym-clusters', function() { map.getCanvas().style.cursor = ''; });
+  console.log('buildMarkers complete, GL clustering active');
 }
 
-
-function selectGym(idx) {
+// ── SELECT GYM ────────────────────────────────────────────
+function selectGym(idx, el) {
+  if (selectedMarker) selectedMarker.classList.remove('selected');
+  selectedMarker = el;
+  el.classList.add('selected');
   selectedGym = GYMS.features[idx];
   selectedGymIdx = idx;
-  selectedMarker = null;
   // Highlight selected gym in GL layer
   if (map.getLayer('ecn-gym-points')) {
     map.setPaintProperty('ecn-gym-points', 'circle-color', [
@@ -1335,16 +1309,17 @@ function selectGym(idx) {
       'case', ['==', ['get', '_origIdx'], idx], 11, 8
     ]);
   }
-  var tooltip = document.getElementById('gym-tooltip');
+  // Clear tooltip immediately on tap (no mouseleave on mobile)
+  const tooltip = document.getElementById('gym-tooltip');
   if (tooltip) tooltip.classList.remove('visible');
   clearTransportMarkers();
   showPanel(selectedGym.properties, idx);
   map.flyTo({ center: selectedGym.geometry.coordinates, zoom: Math.max(map.getZoom(), 13), duration: 800 });
-  var coords = selectedGym.geometry.coordinates;
-  fetchTransportStops(coords[1], coords[0]);
+  const [lng, lat] = selectedGym.geometry.coordinates;
+  fetchTransportStops(lat, lng);
 }
 
-
+// ── PANEL ─────────────────────────────────────────────────
 function showPanel(p, idx) {
   document.getElementById('panel-name').textContent = p.name;
   document.getElementById('panel-address').textContent = p.address;
@@ -1462,6 +1437,7 @@ function transportLabel(mode) {
 function closePanel() {
   document.getElementById('panel').classList.remove('open');
   document.body.classList.remove('panel-open-mobile');
+  if (selectedMarker) selectedMarker.classList.remove('selected');
   selectedMarker = null;
   selectedGym = null;
   selectedGymIdx = null;
@@ -1477,30 +1453,58 @@ function closePanel() {
 let chainHighlightActive = false;
 
 function filterByChain() {
-  var chainName = document.getElementById('chain-filter-btn').dataset.chain;
+  const chainName = document.getElementById('chain-filter-btn').dataset.chain;
   if (!chainName) return;
   chainHighlightActive = true;
-  if (map.getLayer('ecn-gym-points')) {
-    map.setPaintProperty('ecn-gym-points', 'circle-color', [
-      'case', ['==', ['get', 'chain'], chainName], '#d4581a', 'rgba(100,100,100,0.25)'
-    ]);
-    map.setPaintProperty('ecn-gym-points', 'circle-radius', [
-      'case', ['==', ['get', 'chain'], chainName], 11, 5
-    ]);
-  }
-  if (map.getLayer('ecn-gym-clusters')) {
-    map.setPaintProperty('ecn-gym-clusters', 'circle-opacity', 0.25);
-  }
-  var chainGyms = GYMS.features.filter(function(f) {
-    return f.properties.chain && f.properties.chain.trim() === chainName;
+
+  // Hide ALL existing gym layers
+  ['ecn-gym-clusters', 'ecn-gym-cluster-count', 'ecn-gym-points'].forEach(function(id) {
+    if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'none');
   });
-  if (chainGyms.length > 1) {
-    var coords = chainGyms.map(function(f) { return f.geometry.coordinates; });
-    var bounds = coords.reduce(function(b, c) { return b.extend(c); },
-      new mapboxgl.LngLatBounds(coords[0], coords[0]));
-    map.fitBounds(bounds, { padding: 80, maxZoom: 12, duration: 800 });
+
+  // Create a separate unclustered source with just this chain's gyms
+  const chainGyms = GYMS.features.filter(f =>
+    f.properties.chain && f.properties.chain.trim() === chainName
+  );
+  const chainGeoJSON = { type: 'FeatureCollection', features: chainGyms };
+
+  if (map.getSource('ecn-chain-highlight')) {
+    map.getSource('ecn-chain-highlight').setData(chainGeoJSON);
+  } else {
+    map.addSource('ecn-chain-highlight', { type: 'geojson', data: chainGeoJSON });
   }
-  var btn = document.getElementById('chain-filter-btn');
+
+  // Blue chain markers — prominent, unclustered, always visible
+  if (!map.getLayer('ecn-chain-fill')) {
+    map.addLayer({
+      id: 'ecn-chain-fill',
+      type: 'circle',
+      source: 'ecn-chain-highlight',
+      paint: {
+        'circle-color': '#000099',
+        'circle-radius': 10,
+        'circle-stroke-width': 3,
+        'circle-stroke-color': '#ffffff',
+        'circle-opacity': 1
+      }
+    });
+  } else {
+    map.setLayoutProperty('ecn-chain-fill', 'visibility', 'visible');
+  }
+
+  // Fit map to chain bounds
+  if (chainGyms.length > 1) {
+    const coords = chainGyms.map(f => f.geometry.coordinates);
+    const bounds = coords.reduce(
+      (b, c) => b.extend(c),
+      new mapboxgl.LngLatBounds(coords[0], coords[0])
+    );
+    map.fitBounds(bounds, { padding: 80, maxZoom: 14, duration: 800 });
+  } else if (chainGyms.length === 1) {
+    map.flyTo({ center: chainGyms[0].geometry.coordinates, zoom: 13, duration: 800 });
+  }
+
+  const btn = document.getElementById('chain-filter-btn');
   btn.textContent = t('chain_clear');
   btn.onclick = clearChainHighlight;
 }
@@ -1508,6 +1512,18 @@ function filterByChain() {
 function clearChainHighlight() {
   if (!chainHighlightActive) return;
   chainHighlightActive = false;
+
+  // Hide the chain overlay
+  if (map.getLayer('ecn-chain-fill')) {
+    map.setLayoutProperty('ecn-chain-fill', 'visibility', 'none');
+  }
+
+  // Restore normal gym layers
+  ['ecn-gym-clusters', 'ecn-gym-cluster-count', 'ecn-gym-points'].forEach(function(id) {
+    if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'visible');
+  });
+
+  // Reset any paint property overrides
   if (map.getLayer('ecn-gym-points')) {
     map.setPaintProperty('ecn-gym-points', 'circle-color', '#d4581a');
     map.setPaintProperty('ecn-gym-points', 'circle-radius', 8);
@@ -1515,26 +1531,28 @@ function clearChainHighlight() {
   if (map.getLayer('ecn-gym-clusters')) {
     map.setPaintProperty('ecn-gym-clusters', 'circle-opacity', 0.92);
   }
-  var btn = document.getElementById('chain-filter-btn');
+
+  const btn = document.getElementById('chain-filter-btn');
   if (btn) {
-    var chainName = btn.dataset.chain;
-    var chainCount = chainName ? GYMS.features.filter(function(f) {
-      return f.properties.chain && f.properties.chain.trim() === chainName;
-    }).length : 0;
+    const chainName = btn.dataset.chain || '';
+    const chainCount = chainName ? GYMS.features.filter(f =>
+      f.properties.chain && f.properties.chain.trim() === chainName
+    ).length : 0;
     btn.textContent = t('chain_show') + chainCount + (chainCount !== 1 ? t('chain_suffix_p') : t('chain_suffix_s'));
     btn.onclick = filterByChain;
   }
 }
 
 // ── MAP CLICK HANDLER ─────────────────────────────────────────────
-map.on('click', function(e) {
-  // GL layer clicks (clusters, points) are handled by their own listeners
-  var gymFeatures = map.queryRenderedFeatures(e.point, { layers: ['ecn-gym-clusters', 'ecn-gym-points'] });
+map.on('click', e => {
+  // GL layer clicks handled by their own listeners
+  var gymFeatures = map.queryRenderedFeatures(e.point, { layers: ['ecn-gym-clusters', 'ecn-gym-points'].filter(function(id) { return !!map.getLayer(id); }) });
   if (gymFeatures.length > 0) return;
-  // Transport/roundup DOM markers
-  var clickedMarker = e.originalEvent.target.closest('.transport-marker, .roundup-marker, #loc-cursor');
+
+  const clickedMarker = e.originalEvent.target.closest('.transport-marker');
   if (clickedMarker) return;
-  var panel = document.getElementById('panel');
+
+  const panel = document.getElementById('panel');
   if (panel.classList.contains('minimised') || panel.classList.contains('open')) {
     closePanel();
     panel.classList.remove('minimised');
@@ -1772,6 +1790,33 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
 map.once('load', () => {
   console.log('Map load event fired | GYMS:', GYMS ? GYMS.features.length : 'null');
   if (GYMS) buildMarkers();
+
+  // ── GL gym click listeners — registered once, not inside buildMarkers ──
+  map.on('click', 'ecn-gym-clusters', function(e) {
+    e.preventDefault();
+    var clusterId = e.features[0].properties.cluster_id;
+    var coords = e.features[0].geometry.coordinates.slice();
+    map.getSource('ecn-gyms').getClusterExpansionZoom(clusterId, function(err, zoom) {
+      if (err) return;
+      map.easeTo({ center: coords, zoom: zoom + 0.5 });
+    });
+  });
+
+  map.on('click', 'ecn-gym-points', function(e) {
+    e.preventDefault();
+    var props = e.features[0].properties;
+    var origIdx = (props._origIdx !== undefined) ? Number(props._origIdx) : -1;
+    if (origIdx < 0) {
+      var coords = e.features[0].geometry.coordinates;
+      origIdx = GYMS.features.findIndex(function(gf) {
+        return gf.geometry.coordinates[0] === coords[0] && gf.geometry.coordinates[1] === coords[1];
+      });
+    }
+    if (origIdx < 0) return;
+    var el = document.createElement('div');
+    el.className = 'gym-marker selected';
+    selectGym(origIdx, el);
+  });
 });
 
 // ── SEARCH ────────────────────────────────────────────────────────
@@ -1804,7 +1849,9 @@ searchResults.addEventListener('click', e => {
   searchResults.innerHTML = '';
   searchResults.classList.remove('open');
   map.flyTo({ center: gym.geometry.coordinates, zoom: 14, duration: 800 });
-  selectGym(idx);
+  var el = document.createElement('div');
+  el.className = 'gym-marker selected';
+  selectGym(idx, el);
 });
 
 document.addEventListener('click', e => {
